@@ -85,12 +85,12 @@ export default function Layout({ children }: LayoutProps) {
       <header className={styles.appHeader}>
         <div className={styles.headerLeft}>
           <img 
-            src="./PowerApps_scalable.svg" 
+            src="./PowerApps_ShareValue.svg" 
             alt="Power Apps" 
-            style={{ width: '24px', height: '24px' }} 
+            style={{ width: '96px', height: '24px' }} 
           />
           <Text weight="semibold" size={500} style={{ color: tokens.colorNeutralForeground1 }}>
-            Planning Tool 
+            PlanningsTool 
           </Text>
         </div>
 

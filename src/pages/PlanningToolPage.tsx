@@ -15,11 +15,17 @@ import {
   AccordionItem,
   AccordionHeader,
   AccordionPanel,
+  Dialog,
+  DialogSurface,
+  DialogBody,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  DialogTrigger,
 } from '@fluentui/react-components';
 import {
   ChevronLeftRegular,
   ChevronRightRegular,
-  PeopleTeamRegular,
 } from '@fluentui/react-icons';
 import { useMemo, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
@@ -69,21 +75,6 @@ const useStyles = makeStyles({
   },
   main: {
     minWidth: 0,
-  },
-  titleRow: {
-    display: 'flex',
-    alignItems: 'center',
-    ...shorthands.gap('12px'),
-    marginBottom: '20px',
-  },
-  titleIcon: {
-    fontSize: '32px',
-    color: tokens.colorBrandForeground1,
-  },
-  title: {
-    fontSize: tokens.fontSizeBase600,
-    fontWeight: tokens.fontWeightBold,
-    color: tokens.colorNeutralForeground1,
   },
   tableWrapper: {
     overflowX: 'auto',
@@ -155,13 +146,14 @@ const useStyles = makeStyles({
     height: '14px',
     ...shorthands.borderRadius(tokens.borderRadiusSmall),
   },
-  detailSection: {
-    marginTop: '32px',
-  },
   loadingContainer: {
     display: 'flex',
     justifyContent: 'center',
     ...shorthands.padding('48px', '0'),
+  },
+  dialogSurface: {
+    maxWidth: '60vw',
+    width: '60vw',
   },
 });
 
@@ -173,14 +165,27 @@ const TYPE_COLORS: Record<Uursoort, { background: string; foreground: string }> 
   feestdag: { background: tokens.colorPaletteGrapeBackground2, foreground: tokens.colorPaletteGrapeForeground2 },
 };
 
-function weekTooltip(u: { type: Uursoort; hours: number; project_name?: string | null }): string {
-  return `${u.type}: ${u.hours}h${u.project_name ? ` — ${u.project_name}` : ''}`;
+type WeekUrenEntry = { type: Uursoort; hours: number; project_name?: string | null };
+
+// Reservering hours for internal employees represent vacation, not a generic reservation —
+// relabel and color it like a holiday so it's visually distinct in the timeline.
+function getSegmentDisplay(u: WeekUrenEntry, isIntern: boolean): { label: string; background: string; foreground: string } {
+  if (u.type === 'reservering' && u.hours > 8 && isIntern) {
+    return { label: 'Vakantie', ...TYPE_COLORS.feestdag };
+  }
+  const { background, foreground } = TYPE_COLORS[u.type];
+  return { label: u.type, background, foreground };
+}
+
+function weekTooltip(u: WeekUrenEntry, isIntern: boolean): string {
+  const { label } = getSegmentDisplay(u, isIntern);
+  return `${label}: ${u.hours}h${u.project_name ? ` — ${u.project_name}` : ''}`;
 }
 
 // Renders each week as a horizontal bar split into segments per week_uren entry, sized
 // proportionally to hours, so leave/holiday/multiple projects within one week stay visible
 // (matches the ClockWise API's per-day breakdown, e.g. 4h reservering + 36h inzet in one week).
-function WeekBar({ week, hoursPerWeek }: { week: WeekAvailability; hoursPerWeek: number }) {
+function WeekBar({ week, hoursPerWeek, isIntern }: { week: WeekAvailability; hoursPerWeek: number; isIntern: boolean }) {
   const styles = useStyles();
   const denominator = Math.max(week.total_hours, hoursPerWeek, 1);
 
@@ -200,13 +205,13 @@ function WeekBar({ week, hoursPerWeek }: { week: WeekAvailability; hoursPerWeek:
   return (
     <div className={styles.barTrack}>
       {week.week_uren.map((u, idx) => {
-        const { background, foreground } = TYPE_COLORS[u.type];
+        const { background, foreground } = getSegmentDisplay(u, isIntern);
         const widthPercent = (u.hours / denominator) * 100;
         return (
           <div
             key={idx}
             className={styles.barSegment}
-            title={weekTooltip(u)}
+            title={weekTooltip(u, isIntern)}
             style={{ width: `${widthPercent}%`, backgroundColor: background, color: foreground }}
           >
             {u.hours}
@@ -226,10 +231,11 @@ export default function PlanningToolPage() {
   const [searchTerm, setSearchTerm] = useState('');
   const [hideFullyAssigned, setHideFullyAssigned] = useState(false);
   const [department, setDepartment] = useState<string>('Intern');
+  const [departmentName, setDepartmentName] = useState<string | undefined>(undefined);
   const [selectedEmployeeId, setSelectedEmployeeId] = useState<number | null>(null);
 
   const availabilityQuery = useQuery({
-    queryKey: ['planning-tool', 'availability', week, year, weeksToShow, department],
+    queryKey: ['planning-tool', 'availability', week, year, weeksToShow, department, departmentName],
     queryFn: () => PlanningToolService.getAvailability({ week, year, weeks: weeksToShow, department: department || undefined }),
   });
 
@@ -237,6 +243,8 @@ export default function PlanningToolPage() {
     queryKey: ['planning-tool', 'departments'],
     queryFn: () => PlanningToolService.getDepartments(),
   });
+
+
 
   const employeeDetailQuery = useQuery({
     queryKey: ['planning-tool', 'employee', selectedEmployeeId],
@@ -247,17 +255,33 @@ export default function PlanningToolPage() {
   const data = availabilityQuery.data;
 
   const filteredEmployees = useMemo(() => {
-    if (!data) return [];
-    return data.employees.filter((employee: EmployeeAvailability) => {
-      if (searchTerm.trim() && !employee.name.toLowerCase().includes(searchTerm.trim().toLowerCase())) {
-        return false;
-      }
-      if (hideFullyAssigned && employee.weeks.every((w) => w.is_fully_assigned)) {
-        return false;
-      }
-      return true;
-    });
-  }, [data, searchTerm, hideFullyAssigned]);
+  if (!data) return [];
+
+  return data.employees.filter((employee: EmployeeAvailability) => {
+    if (
+      searchTerm.trim() &&
+      !employee.name.toLowerCase().includes(searchTerm.trim().toLowerCase())
+    ) {
+      return false;
+    }
+
+    if (
+      hideFullyAssigned &&
+      employee.weeks.every((w) => w.is_fully_assigned)
+    ) {
+      return false;
+    }
+
+    if (
+      departmentName &&
+      employee.department_name !== departmentName
+    ) {
+      return false;
+    }
+
+    return true;
+  });
+}, [data, searchTerm, hideFullyAssigned, departmentName]);
 
   const handleWeekShift = (delta: number) => {
     const baseWeek = week ?? data?.week_start;
@@ -268,8 +292,22 @@ export default function PlanningToolPage() {
     setYear(next.year);
   };
 
+  const departmentNames = useMemo(() => {
+  if (!data) return [];
+
+  return Array.from(
+    new Set(
+      data.employees
+        .map((employee) => employee.department_name)
+        .filter((name): name is string => !!name)
+    )
+  ).sort();
+}, [data]);
+
   return (
+    
     <div className={styles.container}>
+        
       {/* Filters sidebar */}
       <aside className={styles.sidebar}>
         <Text weight="semibold" size={400}>Filters</Text>
@@ -298,14 +336,13 @@ export default function PlanningToolPage() {
         </div>
 
         <div className={styles.filterGroup}>
-          <span className={styles.filterLabel}>Weeks to show</span>
+          <span className={styles.filterLabel}>Weken {weeksToShow}</span>
           <Slider
             min={1}
-            max={10}
+            max={7}
             value={weeksToShow}
             onChange={(_, dataSlider) => setWeeksToShow(dataSlider.value)}
           />
-          <Text size={200}>{weeksToShow}</Text>
         </div>
 
         <div className={styles.filterGroup}>
@@ -324,7 +361,7 @@ export default function PlanningToolPage() {
         />
 
         <div className={styles.filterGroup}>
-          <span className={styles.filterLabel}>Department</span>
+          <span className={styles.filterLabel}>Contract</span>
           <Dropdown
             value={department || 'All'}
             selectedOptions={[department]}
@@ -336,6 +373,32 @@ export default function PlanningToolPage() {
             ))}
           </Dropdown>
         </div>
+
+        <div className={styles.filterGroup}>
+        <span className={styles.filterLabel}>Unit </span>
+
+        <Dropdown
+            value={departmentName || 'All'}
+            selectedOptions={departmentName ? [departmentName] : []}
+            onOptionSelect={(_, optionData) => {
+            setDepartmentName(
+                optionData.optionValue === 'All'
+                ? undefined
+                : optionData.optionValue
+            );
+            }}
+        >
+            <Option value="All">All</Option>
+
+            {departmentNames.map((name) => (
+            <Option key={name} value={name}>
+                {name}
+            </Option>
+            ))}
+        </Dropdown>
+        </div>
+            
+
       </aside>
 
       {/* Main content */}
@@ -366,7 +429,11 @@ export default function PlanningToolPage() {
                 <thead>
                   <tr>
                     <th className={styles.th}>Naam</th>
-                    <th className={styles.th}>Contract</th>
+                    <th className={styles.th}>
+                    {filteredEmployees[0]?.department_category === 'Intern'
+                        ? 'PeM'
+                        : 'Contract'}
+                    </th>
                     <th className={styles.th}>Contract uren</th>
                     {filteredEmployees[0]?.weeks.map((w) => (
                       <th key={w.week_nr} className={styles.th}>W{w.week_nr}</th>
@@ -374,6 +441,7 @@ export default function PlanningToolPage() {
                   </tr>
                 </thead>
                 <tbody>
+               
                   {filteredEmployees.map((employee) => (
                     <tr
                       key={employee.id}
@@ -381,11 +449,11 @@ export default function PlanningToolPage() {
                       style={{ cursor: 'pointer' }}
                     >
                       <td className={styles.td}>{employee.name}</td>
-                      <td className={styles.td}>{employee.department_category ?? '-'}</td>
+                      <td className={styles.td}>{employee.department_name ?? '-'}</td>
                       <td className={styles.td}>{employee.hours_per_week}</td>
                       {employee.weeks.map((w) => (
                         <td key={w.week_nr} className={`${styles.td} ${styles.weekCell}`}>
-                          <WeekBar week={w} hoursPerWeek={employee.hours_per_week} />
+                          <WeekBar week={w} hoursPerWeek={employee.hours_per_week} isIntern={employee.department_category === 'Intern'} />
                         </td>
                       ))}
                     </tr>
@@ -401,85 +469,89 @@ export default function PlanningToolPage() {
 
             <Accordion collapsible>
               <AccordionItem value="legend">
-                <AccordionHeader>Legend</AccordionHeader>
+                <AccordionHeader>Legenda</AccordionHeader>
                 <AccordionPanel>
                   <div className={styles.legendRow}>
                     <span className={styles.legendItem}>
                       <span className={styles.legendSwatch} style={{ backgroundColor: TYPE_COLORS.inzet.background }} />
-                      Assignment
+                      Opdracht / Inzet
                     </span>
                     <span className={styles.legendItem}>
                       <span className={styles.legendSwatch} style={{ backgroundColor: TYPE_COLORS.reservering.background }} />
-                      Reserved
+                      Gereserveerd
                     </span>
                     <span className={styles.legendItem}>
                       <span className={styles.legendSwatch} style={{ backgroundColor: TYPE_COLORS.beschikbaar.background }} />
-                      Available
+                      Beschikbaar
                     </span>
                     <span className={styles.legendItem}>
                       <span className={styles.legendSwatch} style={{ backgroundColor: TYPE_COLORS.feestdag.background }} />
-                      Holiday
+                      Vakantie
                     </span>
                   </div>
                 </AccordionPanel>
               </AccordionItem>
             </Accordion>
 
-            <div className={styles.detailSection}>
-              <div className={styles.titleRow}>
-                <PeopleTeamRegular className={styles.titleIcon} />
-                <Text className={styles.title} style={{ fontSize: tokens.fontSizeBase500 }}>Employee Detail</Text>
-              </div>
-              <Dropdown
-                placeholder="— select —"
-                value={filteredEmployees.find((e) => e.id === selectedEmployeeId)?.name ?? ''}
-                selectedOptions={selectedEmployeeId !== null ? [String(selectedEmployeeId)] : []}
-                onOptionSelect={(_, optionData) => setSelectedEmployeeId(optionData.optionValue ? Number(optionData.optionValue) : null)}
-              >
-                {filteredEmployees.map((employee) => (
-                  <Option key={employee.id} value={String(employee.id)}>{employee.name}</Option>
-                ))}
-              </Dropdown>
+            <Dialog
+              open={selectedEmployeeId !== null}
+              onOpenChange={(_, dialogData) => {
+                if (!dialogData.open) setSelectedEmployeeId(null);
+              }}
+            >
+              <DialogSurface className={styles.dialogSurface}>
+                <DialogBody>
+                  <DialogTitle>
+                    {filteredEmployees.find((e) => e.id === selectedEmployeeId)?.name ?? 'Employee Detail'}
+                  </DialogTitle>
+                  <DialogContent>
+                    {employeeDetailQuery.isLoading && (
+                      <div className={styles.loadingContainer}>
+                        <Spinner size="small" label="Loading employee detail..." />
+                      </div>
+                    )}
 
-              {employeeDetailQuery.isLoading && selectedEmployeeId !== null && (
-                <div className={styles.loadingContainer}>
-                  <Spinner size="small" label="Loading employee detail..." />
-                </div>
-              )}
-
-              {employeeDetailQuery.data && (
-                <div className={styles.tableWrapper} style={{ marginTop: '16px' }}>
-                  <table className={styles.table}>
-                    <thead>
-                      <tr>
-                        <th className={styles.th}>Week</th>
-                        <th className={styles.th}>Monday</th>
-                        <th className={styles.th}>Total hours</th>
-                        <th className={styles.th}>Fully assigned</th>
-                        <th className={styles.th}>Details</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {employeeDetailQuery.data.weeks.map((w) => (
-                        <tr key={w.week_nr}>
-                          <td className={styles.td}>W{w.week_nr}</td>
-                          <td className={styles.td}>{w.monday}</td>
-                          <td className={styles.td}>{w.total_hours}</td>
-                          <td className={styles.td}>{w.is_fully_assigned ? 'Yes' : 'No'}</td>
-                          <td className={styles.td}>
-                            {w.week_uren.map((u, idx) => (
-                              <div key={idx}>
-                                {u.type}: {u.hours}h{u.project_name ? ` — ${u.project_name}` : ''}
-                              </div>
+                    {employeeDetailQuery.data && (
+                      <div className={styles.tableWrapper}>
+                        <table className={styles.table}>
+                          <thead>
+                            <tr>
+                              <th className={styles.th}>Week</th>
+                              <th className={styles.th}></th>
+                              <th className={styles.th}>Uren totaal</th>
+                              <th className={styles.th}>Ingezet</th>
+                              <th className={styles.th}>Details</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {employeeDetailQuery.data.weeks.map((w) => (
+                              <tr key={w.week_nr}>
+                                <td className={styles.td}>W{w.week_nr}</td>
+                                <td className={styles.td}>{w.monday}</td>
+                                <td className={styles.td}>{w.total_hours}</td>
+                                <td className={styles.td}>{w.is_fully_assigned ? 'Yes' : 'No'}</td>
+                                <td className={styles.td}>
+                                  {w.week_uren.map((u, idx) => (
+                                    <div key={idx}>
+                                      {getSegmentDisplay(u, employeeDetailQuery.data?.department_category === 'Intern').label}: {u.hours}h{u.project_name ? ` — ${u.project_name}` : ''}
+                                    </div>
+                                  ))}
+                                </td>
+                              </tr>
                             ))}
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              )}
-            </div>
+                          </tbody>
+                        </table>
+                      </div>
+                    )}
+                  </DialogContent>
+                  <DialogActions>
+                    <DialogTrigger disableButtonEnhancement>
+                      <Button appearance="secondary" onClick={() => setSelectedEmployeeId(null)}>Close</Button>
+                    </DialogTrigger>
+                  </DialogActions>
+                </DialogBody>
+              </DialogSurface>
+            </Dialog>
           </>
         )}
       </main>

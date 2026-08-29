@@ -54,6 +54,7 @@ export interface GetAvailabilityParams {
   year?: number;
   weeks?: number;
   department?: string;
+
 }
 
 async function getJson<T>(path: string, params?: Record<string, string | number | undefined>): Promise<T> {
@@ -83,6 +84,7 @@ export const PlanningToolService = {
         year: params.year,
         weeks: params.weeks,
         department: params.department,
+     
       });
     } catch {
       // API not reachable (e.g. running inside Power Apps without access to localhost) — show mock data instead.
