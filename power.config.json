@@ -1,0 +1,23 @@
+{
+  "version": "1.0",
+  "appId": "bf6f9712-3d55-4d1a-aebc-144b1c17d2e6",
+  "appDisplayName": "Planning Tool",
+  "region": "prod",
+  "environmentId": "87f264fa-239c-eee5-a7f6-58a7e77c4353",
+  "description": " ",
+  "buildPath": "./dist",
+  "buildEntryPoint": "index.html",
+  "localAppUrl": "http://localhost:3000",
+  "logoPath": "Default",
+  "connectionReferences": {
+    "c8e93c1b-9435-47e5-9d9d-2587c10df053": {
+      "id": "/providers/Microsoft.PowerApps/apis/shared_office365users",
+      "displayName": "Office 365 Users",
+      "dataSources": [
+        "office365users"
+      ],
+      "dataSets": {}
+    }
+  },
+  "databaseReferences": {}
+}

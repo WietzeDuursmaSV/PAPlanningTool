@@ -2,10 +2,9 @@ import { Routes, Route } from 'react-router-dom'
 import { makeStyles, shorthands, tokens, Spinner } from '@fluentui/react-components'
 import { lazy, Suspense } from 'react'
 import Layout from './components/Layout'
-import HomePage from './pages/HomePage'
 
 // Lazy load pages for code splitting
-const Office365Page = lazy(() => import('./pages/Office365Page'))
+const PlanningToolPage = lazy(() => import('./pages/PlanningToolPage'))
 
 const useStyles = makeStyles({
   root: {
@@ -36,8 +35,7 @@ function App() {
       <Layout>
         <Suspense fallback={<LoadingFallback />}>
           <Routes>
-            <Route path="/" element={<HomePage />} />
-            <Route path="/office365" element={<Office365Page />} />
+            <Route path="/" element={<PlanningToolPage />} />
           </Routes>
         </Suspense>
       </Layout>

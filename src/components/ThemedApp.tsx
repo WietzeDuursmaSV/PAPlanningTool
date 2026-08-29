@@ -7,9 +7,16 @@ import App from '../App';
 
 export const ThemedApp = () => {
   const { theme } = useTheme();
-  
+
+  // Fluent UI components read fontFamilyBase from the theme, not from CSS,
+  // so overriding it here ensures Open Sans isn't overridden by Fluent's defaults.
+  const themedFont = {
+    ...theme,
+    fontFamilyBase: "'Open Sans', sans-serif",
+  };
+
   return (
-    <FluentProvider theme={theme}>
+    <FluentProvider theme={themedFont}>
       <QueryClientProvider client={queryClient}> 
         <HashRouter>
           <App />
