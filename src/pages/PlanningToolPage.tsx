@@ -111,8 +111,27 @@ const useStyles = makeStyles({
     whiteSpace: 'nowrap',
   },
   weekCell: {
-    textAlign: 'right',
+    ...shorthands.padding('4px', '6px'),
+    minWidth: '110px',
+  },
+  barTrack: {
+    display: 'flex',
+    width: '100%',
+    height: '28px',
+    ...shorthands.borderRadius(tokens.borderRadiusSmall),
+    overflow: 'hidden',
+    backgroundColor: tokens.colorNeutralBackground2,
+  },
+  barSegment: {
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    flexShrink: 0,
+    height: '100%',
+    fontSize: tokens.fontSizeBase100,
     fontWeight: tokens.fontWeightSemibold,
+    overflow: 'hidden',
+    ...shorthands.borderRight('1px', 'solid', tokens.colorNeutralBackground1),
   },
   summaryRow: {
     marginTop: '16px',
@@ -146,39 +165,56 @@ const useStyles = makeStyles({
   },
 });
 
-// Dominant hour type per week decides the cell color, matching the legend:
-// 🟢 available · 🔵 assigned · 🟠 leave · 🔴 holiday
+// Colors per hour type, matching the legacy tool's legend: 🟢 assignment · ⬜ reserved · 🟠 available · 🟣 holiday
 const TYPE_COLORS: Record<Uursoort, { background: string; foreground: string }> = {
-  beschikbaar: { background: tokens.colorPaletteGreenBackground2, foreground: tokens.colorPaletteGreenForeground2 },
-  inzet: { background: tokens.colorPaletteBlueBackground2, foreground: tokens.colorPaletteBlueForeground2 },
-  reservering: { background: tokens.colorPaletteMarigoldBackground2, foreground: tokens.colorPaletteMarigoldForeground2 },
-  feestdag: { background: tokens.colorPaletteRedBackground2, foreground: tokens.colorPaletteRedForeground2 },
+  inzet: { background: tokens.colorPaletteLightGreenBackground2, foreground: tokens.colorPaletteLightGreenForeground2 },
+  reservering: { background: tokens.colorNeutralBackground3, foreground: tokens.colorNeutralForeground2 },
+  beschikbaar: { background: '#cfe4fa', foreground: tokens.colorPalettePeachForeground2 },
+  feestdag: { background: tokens.colorPaletteGrapeBackground2, foreground: tokens.colorPaletteGrapeForeground2 },
 };
 
-function getDominantType(week: WeekAvailability): Uursoort | null {
-  if (!week.week_uren.length) return null;
-  const totals = new Map<Uursoort, number>();
-  for (const entry of week.week_uren) {
-    totals.set(entry.type, (totals.get(entry.type) ?? 0) + entry.hours);
-  }
-  let best: Uursoort | null = null;
-  let bestHours = -1;
-  for (const [type, hours] of totals) {
-    if (hours > bestHours) {
-      best = type;
-      bestHours = hours;
-    }
-  }
-  return best;
+function weekTooltip(u: { type: Uursoort; hours: number; project_name?: string | null }): string {
+  return `${u.type}: ${u.hours}h${u.project_name ? ` — ${u.project_name}` : ''}`;
 }
 
-function weekCellStyle(week: WeekAvailability): { backgroundColor: string; color: string } {
-  const dominant = getDominantType(week);
-  if (!dominant) {
-    return { backgroundColor: tokens.colorNeutralBackground2, color: tokens.colorNeutralForeground2 };
+// Renders each week as a horizontal bar split into segments per week_uren entry, sized
+// proportionally to hours, so leave/holiday/multiple projects within one week stay visible
+// (matches the ClockWise API's per-day breakdown, e.g. 4h reservering + 36h inzet in one week).
+function WeekBar({ week, hoursPerWeek }: { week: WeekAvailability; hoursPerWeek: number }) {
+  const styles = useStyles();
+  const denominator = Math.max(week.total_hours, hoursPerWeek, 1);
+
+  if (!week.week_uren.length) {
+    return (
+      <div className={styles.barTrack} title="No hours registered">
+        <div
+          className={styles.barSegment}
+          style={{ width: '100%', backgroundColor: tokens.colorNeutralBackground2, color: tokens.colorNeutralForeground2 }}
+        >
+          {week.total_hours || 0}
+        </div>
+      </div>
+    );
   }
-  const { background, foreground } = TYPE_COLORS[dominant];
-  return { backgroundColor: background, color: foreground };
+
+  return (
+    <div className={styles.barTrack}>
+      {week.week_uren.map((u, idx) => {
+        const { background, foreground } = TYPE_COLORS[u.type];
+        const widthPercent = (u.hours / denominator) * 100;
+        return (
+          <div
+            key={idx}
+            className={styles.barSegment}
+            title={weekTooltip(u)}
+            style={{ width: `${widthPercent}%`, backgroundColor: background, color: foreground }}
+          >
+            {u.hours}
+          </div>
+        );
+      })}
+    </div>
+  );
 }
 
 export default function PlanningToolPage() {
@@ -189,7 +225,7 @@ export default function PlanningToolPage() {
   const [weeksToShow, setWeeksToShow] = useState(5);
   const [searchTerm, setSearchTerm] = useState('');
   const [hideFullyAssigned, setHideFullyAssigned] = useState(false);
-  const [department, setDepartment] = useState<string>('');
+  const [department, setDepartment] = useState<string>('Intern');
   const [selectedEmployeeId, setSelectedEmployeeId] = useState<number | null>(null);
 
   const availabilityQuery = useQuery({
@@ -311,6 +347,12 @@ export default function PlanningToolPage() {
           </div>
         )}
 
+        {data?.source === 'mock' && (
+          <Badge appearance="tint" color="warning" style={{ marginBottom: '16px' }}>
+            Showing sample data — the planning tool API isn't reachable from here (uvicorn api.main:app --reload runs only locally).
+          </Badge>
+        )}
+
         {availabilityQuery.isError && (
           <Badge appearance="tint" color="danger">
             Failed to load data from the planning tool API. Make sure it's running locally (uvicorn api.main:app --reload).
@@ -323,9 +365,9 @@ export default function PlanningToolPage() {
               <table className={styles.table}>
                 <thead>
                   <tr>
-                    <th className={styles.th}>Employee</th>
-                    <th className={styles.th}>Dept</th>
-                    <th className={styles.th}>H/wk</th>
+                    <th className={styles.th}>Naam</th>
+                    <th className={styles.th}>Contract</th>
+                    <th className={styles.th}>Contract uren</th>
                     {filteredEmployees[0]?.weeks.map((w) => (
                       <th key={w.week_nr} className={styles.th}>W{w.week_nr}</th>
                     ))}
@@ -341,18 +383,11 @@ export default function PlanningToolPage() {
                       <td className={styles.td}>{employee.name}</td>
                       <td className={styles.td}>{employee.department_category ?? '-'}</td>
                       <td className={styles.td}>{employee.hours_per_week}</td>
-                      {employee.weeks.map((w) => {
-                        const cellStyle = weekCellStyle(w);
-                        return (
-                          <td
-                            key={w.week_nr}
-                            className={`${styles.td} ${styles.weekCell}`}
-                            style={cellStyle}
-                          >
-                            {w.total_hours}
-                          </td>
-                        );
-                      })}
+                      {employee.weeks.map((w) => (
+                        <td key={w.week_nr} className={`${styles.td} ${styles.weekCell}`}>
+                          <WeekBar week={w} hoursPerWeek={employee.hours_per_week} />
+                        </td>
+                      ))}
                     </tr>
                   ))}
                 </tbody>
@@ -370,16 +405,16 @@ export default function PlanningToolPage() {
                 <AccordionPanel>
                   <div className={styles.legendRow}>
                     <span className={styles.legendItem}>
-                      <span className={styles.legendSwatch} style={{ backgroundColor: TYPE_COLORS.beschikbaar.background }} />
-                      Available
-                    </span>
-                    <span className={styles.legendItem}>
                       <span className={styles.legendSwatch} style={{ backgroundColor: TYPE_COLORS.inzet.background }} />
-                      Assigned
+                      Assignment
                     </span>
                     <span className={styles.legendItem}>
                       <span className={styles.legendSwatch} style={{ backgroundColor: TYPE_COLORS.reservering.background }} />
-                      Leave
+                      Reserved
+                    </span>
+                    <span className={styles.legendItem}>
+                      <span className={styles.legendSwatch} style={{ backgroundColor: TYPE_COLORS.beschikbaar.background }} />
+                      Available
                     </span>
                     <span className={styles.legendItem}>
                       <span className={styles.legendSwatch} style={{ backgroundColor: TYPE_COLORS.feestdag.background }} />

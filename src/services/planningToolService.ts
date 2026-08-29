@@ -45,6 +45,8 @@ export interface AvailabilityResponse {
   num_weeks: number;
   generated_at: string;
   employees: EmployeeAvailability[];
+  /** Set to 'mock' when the real API couldn't be reached and mock data was used instead. */
+  source?: 'live' | 'mock';
 }
 
 export interface GetAvailabilityParams {
@@ -68,32 +70,50 @@ async function getJson<T>(path: string, params?: Record<string, string | number 
   if (!response.ok) {
     throw new Error(`Planning tool API request failed (${response.status}): ${path}`);
   }
-  return response.json() as Promise<T>;
+  const json = (await response.json()) as T;
+  console.log(`[PlanningToolService] ${url.toString()} ->`, json);
+  return json;
 }
 
 export const PlanningToolService = {
-  getAvailability(params: GetAvailabilityParams = {}): Promise<AvailabilityResponse> {
-    return getJson<AvailabilityResponse>('/availability', {
-      week: params.week,
-      year: params.year,
-      weeks: params.weeks,
-      department: params.department,
-    });
+  async getAvailability(params: GetAvailabilityParams = {}): Promise<AvailabilityResponse> {
+    try {
+      return await getJson<AvailabilityResponse>('/availability', {
+        week: params.week,
+        year: params.year,
+        weeks: params.weeks,
+        department: params.department,
+      });
+    } catch {
+      // API not reachable (e.g. running inside Power Apps without access to localhost) — show mock data instead.
+      const { buildMockAvailability } = await import('./mockPlanningData');
+      return { ...buildMockAvailability(params), source: 'mock' };
+    }
   },
 
-  getEmployeeAvailability(
+  async getEmployeeAvailability(
     employeeId: number,
     params: Omit<GetAvailabilityParams, 'department'> = {},
   ): Promise<EmployeeAvailability> {
-    return getJson<EmployeeAvailability>(`/availability/${employeeId}`, {
-      week: params.week,
-      year: params.year,
-      weeks: params.weeks,
-    });
+    try {
+      return await getJson<EmployeeAvailability>(`/availability/${employeeId}`, {
+        week: params.week,
+        year: params.year,
+        weeks: params.weeks,
+      });
+    } catch {
+      const { buildMockEmployeeAvailability } = await import('./mockPlanningData');
+      return buildMockEmployeeAvailability(employeeId, params);
+    }
   },
 
-  getDepartments(): Promise<string[]> {
-    return getJson<string[]>('/departments');
+  async getDepartments(): Promise<string[]> {
+    try {
+      return await getJson<string[]>('/departments');
+    } catch {
+      const { getMockDepartments } = await import('./mockPlanningData');
+      return getMockDepartments();
+    }
   },
 };
 

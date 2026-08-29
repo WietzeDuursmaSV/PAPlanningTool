@@ -1,12 +1,20 @@
-# Power App VSC Base
+# Planning Tool (Power Apps Code App)
 
-Herbruikbaar startpunt voor Power Apps **Code Apps** met React + Fluent UI, gebouwd met Vite en de `pac` CLI.
-Bevat twee pagina's:
+Power Apps **Code App** (React + Fluent UI, gebouwd met Vite en de `pac` CLI) die de ClockWise
+Planning Tool API ontsluit. De app opent direct op één pagina, zonder menu:
 
-- **Home** — overzichtspagina met kaart(en) die doorlinken naar de voorbeelden.
-- **Office 365** — live gekoppeld aan de Office 365 Users-connector (profiel, foto, gebruikers zoeken).
+- **Planning Tool** — weekplanning van medewerkers: filters (week, aantal weken, zoeken, department,
+  fully-assigned verbergen), een kleurgecodeerd rooster (🟢 beschikbaar · 🔵 ingezet · 🟠 verlof · 🔴 feestdag)
+  en een detailweergave per medewerker.
 
-Gebruik dit project als kopie/startpunt voor nieuwe Power Apps code apps.
+De data komt van de lokale FastAPI-service uit
+[`/Users/wietduur/Documents/DEV/planning-tool`](../planning-tool) (zie de README daar voor de API zelf).
+Deze app is voortgekomen uit het generieke `PowerAppVSCBase`-template.
+
+> ⚠️ **Afhankelijkheid**: deze app heeft nog geen echte custom connector voor de Planning Tool API (zie §4.2).
+> De data komt rechtstreeks van een Python/FastAPI-omgeving die **alleen lokaal** draait
+> (`uvicorn` op `http://localhost:8000`, niet publiek bereikbaar). Zonder die lokaal draaiende Python-service
+> laadt deze app geen data.
 
 ---
 
@@ -19,8 +27,6 @@ De `pac` CLI vereist de .NET SDK. Controleer of deze al is geïnstalleerd:
 ```bash
 dotnet --info
 ```
-
-Zo niet, installeer de laatste SDK (macOS voorbeeld via de officiële installer, of gebruik de VS Code ".NET Install Tool" als die beschikbaar is).
 
 ### 1.2 Power Platform CLI (`pac`)
 
@@ -40,28 +46,30 @@ pac --version
 
 Zorg voor een recente Node.js LTS-versie (`node -v`).
 
+### 1.4 Planning Tool API lokaal draaiend
+
+Deze code app praat rechtstreeks (via `fetch`) met de FastAPI-service uit het `planning-tool`-project:
+
+```bash
+cd /Users/wietduur/Documents/DEV/planning-tool
+source .venv/bin/activate
+uvicorn api.main:app --reload   # http://localhost:8000
+```
+
+Zonder draaiende API blijft de pagina een foutmelding tonen ("Failed to load data from the planning tool API").
+
 ---
 
 ## 2. Inloggen bij Power Platform
 
 ```bash
 pac auth create --name <naam-voor-profiel>
-```
-
-Dit opent een browser om in te loggen. Controleer je actieve profiel/omgeving met:
-
-```bash
 pac auth list
 pac org list
-```
-
-Zorg dat de gewenste omgeving actief is (kolom `Active` met `*`). Wissel eventueel met:
-
-```bash
 pac org select --environment <environment-id-of-url>
 ```
 
-> **Let op:** de omgeving moet **Code Apps** ondersteunen. Als `pac code push` later een fout geeft zoals
+> **Let op:** de omgeving moet **Code Apps** ondersteunen. Als `pac code push` een fout geeft zoals
 > `CodeAppOperationNotAllowedInEnvironment`, moet een omgevingsbeheerder deze feature inschakelen via het
 > [Power Platform Admin Center](https://admin.powerplatform.microsoft.com) → omgeving → Instellingen → Product → Features.
 
@@ -69,55 +77,50 @@ pac org select --environment <environment-id-of-url>
 
 ## 3. Project opzetten
 
-### 3.1 Kopieer dit template
-
-Kopieer deze hele map naar je nieuwe project locatie en hernoem de map/`name` in `package.json` naar smaak.
-
-### 3.2 Dependencies installeren
-
 ```bash
-cd <jouw-project-map>
 npm install
 ```
 
-### 3.3 Code app initialiseren
-
-```bash
-pac code init --displayName "<Weergavenaam van je app>"
-```
-
-Dit maakt een `power.config.json` aan met een unieke `appId` en de actieve `environmentId`.
+`power.config.json` bestaat al in dit project (`appDisplayName: "Planning Tool"`, environment
+`87f264fa-239c-eee5-a7f6-58a7e77c4353`). Bij een eerste `pac code init` in een nieuwe omgeving wordt dit
+bestand met een nieuwe `appId` opnieuw aangemaakt.
 
 ---
 
-## 4. Office 365-connector koppelen (live data)
+## 4. Connectors
 
-De `Office365Page` verwacht een gegenereerde service op `src/generated/services/Office365UsersService.ts`.
-Deze wordt aangemaakt door onderstaande stappen — **zonder deze stap geeft de pagina TypeScript-fouten.**
+### 4.1 Office 365 Users (aanwezig, momenteel ongebruikt in de UI)
 
-### 4.1 Zoek een bestaande connectie (of maak er een via de maker portal)
-
-```bash
-pac connection list
-```
-
-Zoek een regel met API `.../apis/shared_office365users` en status **Connected**. Bestaat deze nog niet, maak
-hem aan via [make.powerapps.com](https://make.powerapps.com) → Connections → Nieuwe connectie → "Office 365 Users".
-
-### 4.2 Voeg de data source toe aan het project
+Gegenereerd via:
 
 ```bash
-pac code add-data-source --apiId shared_office365users --connectionId <connection-id-uit-stap-4.1>
+pac connection list   # zoek connectie met API .../apis/shared_office365users
+pac code add-data-source --apiId shared_office365users --connectionId <connection-id>
 ```
 
-Dit genereert:
-- `src/generated/services/Office365UsersService.ts`
-- `src/generated/models/Office365UsersModel.ts`
-- `.power/schemas/appschemas/dataSourcesInfo.ts`
-- een entry onder `connectionReferences` in `power.config.json`
+Dit zette `src/generated/services/Office365UsersService.ts` en
+`src/generated/models/Office365UsersModel.ts` neer. Deze connector wordt nu niet meer vanuit een pagina
+aangeroepen, maar blijft staan als voorbeeld/referentie.
 
-> Gebruik `--apiId shared_office365users` (kort formaat). De volledige pad-vorm
-> (`/providers/Microsoft.PowerApps/apis/shared_office365users`) geeft een 404-fout.
+### 4.2 Planning Tool API (nog geen custom connector)
+
+De Planning Tool API draait lokaal en is nog **niet** geregistreerd als custom connector in Power Platform.
+[`src/services/planningToolService.ts`](src/services/planningToolService.ts) roept de API rechtstreeks aan via
+`fetch` op `VITE_PLANNING_API_BASE_URL` (standaard `http://localhost:8000`).
+
+Om dit later om te zetten naar een echte custom connector:
+
+1. Maak de API publiek bereikbaar (tunnel zoals ngrok, of een deployment) — Power Platform kan geen
+   `localhost` benaderen.
+2. Registreer een custom connector op basis van `<publieke-url>/openapi.json`
+   (`pac connector create` of via [make.powerapps.com](https://make.powerapps.com) → Custom connectors).
+3. Maak een connectie voor die connector.
+4. Genereer de service in dit project:
+   ```bash
+   pac code add-data-source --apiId <nieuwe-connector-apiId> --connectionId <connection-id>
+   ```
+5. Vervang de `fetch`-aanroepen in `planningToolService.ts` door de gegenereerde connector-service.
+   `PlanningToolPage.tsx` hoeft dan niet te wijzigen, want die roept alleen `PlanningToolService.*` aan.
 
 ---
 
@@ -137,9 +140,7 @@ Dit voert uit: `concurrently -n vite,pac -c blue,green "vite" "pac code run"`.
 https://apps.powerapps.com/play/e/<environment-id>/app/local?_localAppUrl=http://localhost:3000&_localConnectionUrl=http://localhost:8080
 ```
 
-**Open altijd deze play-URL** in de browser om te testen — niet `http://localhost:3000` direct. De Office 365
-data-client werkt alleen binnen de Power Apps player (runtime-bridge), dus los op `localhost:3000` blijft de
-pagina eeuwig op "Loading" hangen.
+**Open altijd deze play-URL** in de browser om te testen — niet `http://localhost:3000` direct.
 
 ---
 
@@ -150,21 +151,21 @@ npm run build
 pac code push
 ```
 
-Na een succesvolle push toont de terminal een permanente play-URL en verschijnt de app in
-**Power Apps → Apps** in de gekozen omgeving. Herhaal deze twee commando's na elke wijziging die je wil delen.
+Na een succesvolle push toont de terminal een permanente play-URL en verschijnt de app als **Planning Tool**
+in **Power Apps → Apps** in de gekozen omgeving. Herhaal deze twee commando's na elke wijziging die je wil delen.
 
 ---
 
-## 7. Bekende valkuilen (opgelost tijdens ontwikkeling van dit template)
+## 7. Bekende valkuilen
 
 | Probleem | Oorzaak | Oplossing |
 |---|---|---|
 | `zsh: command not found: pac` in een terminal die al open was vóórdat `pac` werd geïnstalleerd | zsh's command hash-cache is niet ververst | `hash -r` uitvoeren, of een nieuwe terminal openen |
-| Blanco pagina / `404` op elk verzoek bij het los starten van `vite` | Vite gebruikt de working directory als project-root; als je `vite` via een absoluut pad start vanuit de verkeerde map, vindt hij `index.html` niet | Start `vite` met de projectmap als argument (`vite <pad-naar-project>`) of zorg dat de terminal eerst met `cd` naar de projectmap gaat |
-| `npm run dev` faalt met `sh: start: command not found` | Het originele sample-script gebruikt het Windows-only `start`-commando | Gebruik `concurrently` (zoals in dit template) in plaats van `start ... && start ...` |
+| `npm run dev` faalt met `sh: start: command not found` | Het originele sample-script gebruikt het Windows-only `start`-commando | Gebruik `concurrently` (zoals in dit project) in plaats van `start ... && start ...` |
 | `pac code add-data-source` geeft `HTTP error status: 404` | `--apiId` met het volledige pad (`/providers/Microsoft.PowerApps/apis/...`) i.p.v. de korte naam | Gebruik het korte formaat, bv. `shared_office365users` |
 | `pac code push` geeft `CodeAppOperationNotAllowedInEnvironment` | De doelomgeving heeft de Code Apps-feature niet ingeschakeld | Feature laten inschakelen door een beheerder, of naar een omgeving pushen waar dit al werkt |
-| Office 365-pagina blijft op "Loading user data..." hangen | Pagina wordt los getest op `http://localhost:3000` i.p.v. via de play-URL | Test altijd via de play-URL die `pac code run` teruggeeft |
+| Planning Tool-pagina toont "Failed to load data" | De lokale FastAPI-service (`uvicorn api.main:app --reload`) draait niet | Start de API zoals beschreven in §1.4 |
+| Fluent UI-componenten tonen nog "Segoe UI" i.p.v. Open Sans | Fluent UI leest `fontFamilyBase` uit het `theme`-object, niet uit CSS | Override `fontFamilyBase` op het theme dat aan `FluentProvider` wordt doorgegeven ([ThemedApp.tsx](src/components/ThemedApp.tsx)) |
 
 ---
 
@@ -172,24 +173,18 @@ Na een succesvolle push toont de terminal een permanente play-URL en verschijnt 
 
 ```
 src/
-  App.tsx                 # Routes: Home, Office365
-  main.tsx                # React root + ThemeProvider
+  App.tsx                     # Route: "/" -> PlanningToolPage
+  main.tsx                    # React root + ThemeProvider
   components/
-    Layout.tsx            # Sidebar-navigatie + header
-    PageHeader.tsx         # Herbruikbare paginatitel/subtitel
-    ThemedApp.tsx          # FluentProvider + Router + QueryClient
-  contexts/ThemeContext.tsx # Licht/donker thema state
+    Layout.tsx                # Header (logo + thema-toggle) + footer, geen menu
+    ThemedApp.tsx              # FluentProvider (met Open Sans override) + Router + QueryClient
+  contexts/ThemeContext.tsx    # Licht/donker thema state
   hooks/useTheme.ts
   pages/
-    HomePage.tsx           # Overzicht met link(s) naar voorbeelden
-    Office365Page.tsx      # Live Office 365 Users-connector voorbeeld
-  generated/               # (gegenereerd door pac code add-data-source, niet in dit template aanwezig)
-power.config.json          # (gegenereerd door pac code init, niet in dit template aanwezig)
+    PlanningToolPage.tsx       # Filters, weekrooster, legenda, medewerker-detail
+  services/
+    planningToolService.ts     # fetch-client voor de Planning Tool API (klaar om te vervangen door een generated connector-service)
+  generated/                   # Gegenereerd door `pac code add-data-source` (Office 365 Users)
+power.config.json              # App-metadata (appDisplayName: "Planning Tool", environmentId, connectionReferences)
 ```
 
-## 9. Nieuwe pagina/connector toevoegen (patroon)
-
-1. Voeg de connector toe: `pac code add-data-source --apiId <api-id> --connectionId <connection-id>`.
-2. Maak een pagina in `src/pages/`, importeer de gegenereerde service uit `src/generated/services/...`.
-3. Voeg een `<Route>` toe in `src/App.tsx` en een item in `navItems`/`routeNames` in `src/components/Layout.tsx`.
-4. Test lokaal via de play-URL (`npm run dev`), publiceer met `npm run build && pac code push`.
