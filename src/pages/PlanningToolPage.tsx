@@ -69,9 +69,21 @@ const useStyles = makeStyles({
     alignItems: 'center',
     ...shorthands.gap('8px'),
   },
+  weekNavButtonLeft: {
+    display: 'flex',
+    justifyContent: 'flex-start',
+    ...shorthands.padding('0'),
+  },
+  weekNavButtonRight: {
+    display: 'flex',
+    justifyContent: 'flex-end',
+    ...shorthands.padding('0'),
+  },
+  weekLabel: {
+    fontSize: tokens.fontSizeBase300,
+  },
   weekValue: {
-    fontSize: tokens.fontSizeBase500,
-    fontWeight: tokens.fontWeightBold,
+    fontSize: tokens.fontSizeBase300,
   },
   main: {
     minWidth: 0,
@@ -313,19 +325,21 @@ export default function PlanningToolPage() {
         <Text weight="semibold" size={400}>Filters</Text>
 
         <div className={styles.filterGroup}>
-          <span className={styles.filterLabel}>Week</span>
           <div className={styles.weekNav}>
+          
             <Button
+              className={styles.weekNavButtonLeft}
               icon={<ChevronLeftRegular />}
               appearance="subtle"
               onClick={() => handleWeekShift(-1)}
               disabled={!data}
               aria-label="Previous week"
-            />
+            /> <span className={styles.weekLabel}>Week</span>
             <span className={styles.weekValue}>
-              {data ? `W${data.week_start} / ${data.year}` : '—'}
+              {data ? `${data.week_start} | ${data.year}` : '—'}
             </span>
             <Button
+              className={styles.weekNavButtonRight}
               icon={<ChevronRightRegular />}
               appearance="subtle"
               onClick={() => handleWeekShift(1)}
@@ -336,7 +350,7 @@ export default function PlanningToolPage() {
         </div>
 
         <div className={styles.filterGroup}>
-          <span className={styles.filterLabel}>Weken {weeksToShow}</span>
+          <span className={styles.filterLabel}>Aantal weken om te tonen: {weeksToShow}</span>
           <Slider
             min={1}
             max={7}
