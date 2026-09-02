@@ -139,7 +139,10 @@ export default function PlanningDetails({
                     {office365Profile.officeLocation && (
                       <Text>{office365Profile.officeLocation}</Text>
                     )}
-                    {office365Profile.mail && <Text>{office365Profile.mail}</Text>}
+                    <a href={`mailto:${office365Profile.mail}`}>
+                      <Text>{office365Profile.mail}</Text>
+                    </a>
+
                     {office365Profile.mobilePhone && <Text>{office365Profile.mobilePhone}</Text>}
                     {office365Profile.businessPhones?.map((phone) => (
                       <Text key={phone}>{phone}</Text>
