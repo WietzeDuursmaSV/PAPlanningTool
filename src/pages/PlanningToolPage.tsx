@@ -10,13 +10,6 @@ import {
   Slider,
   Button,
   Badge,
-  Dialog,
-  DialogSurface,
-  DialogBody,
-  DialogTitle,
-  DialogContent,
-  DialogActions,
-  DialogTrigger,
 } from '@fluentui/react-components';
 import { ChevronLeftRegular, ChevronRightRegular } from '@fluentui/react-icons';
 import { useMemo, useState } from 'react';
@@ -31,6 +24,7 @@ import {
 import { Office365UsersService } from '../generated';
 import FilterDropdown from '../components/FilterDropdown';
 import Legenda from '../components/Legenda';
+import PlanningDetails from '../components/PlanningDetails';
 
 const useStyles = makeStyles({
   container: {
@@ -163,39 +157,6 @@ const useStyles = makeStyles({
     gridTemplateColumns: 'minmax(120px, 1fr) 72px repeat(5, minmax(72px, 1fr))',
     ...shorthands.gap('12px'),
     alignItems: 'center',
-  },
-  profileSkeleton: {
-    display: 'flex',
-    flexDirection: 'column',
-    ...shorthands.gap('12px'),
-  },
-  detailSkeleton: {
-    display: 'flex',
-    flexDirection: 'column',
-    ...shorthands.gap('16px'),
-  },
-  dialogSurface: {
-    maxWidth: '60vw',
-    width: '60vw',
-  },
-  dialogContent: {
-    display: 'grid',
-    gridTemplateColumns: 'minmax(180px, 240px) minmax(0, 1fr)',
-    ...shorthands.gap('24px'),
-    '@media (max-width: 700px)': {
-      gridTemplateColumns: '1fr',
-    },
-  },
-  profilePanel: {
-    display: 'flex',
-    flexDirection: 'column',
-    ...shorthands.gap('8px'),
-  },
-  profilePhoto: {
-    width: '96px',
-    height: '96px',
-    objectFit: 'cover',
-    ...shorthands.borderRadius('50%'),
   },
   orangeSlider: {
     '& .fui-Slider__activeTrack': {
@@ -639,137 +600,25 @@ export default function PlanningToolPage() {
               <Legenda />
             </div>
 
-            <Dialog
+            <PlanningDetails
               open={selectedEmployeeId !== null}
-              onOpenChange={(_, dialogData) => {
-                if (!dialogData.open) setSelectedEmployeeId(null);
+              employeeName={selectedEmployee?.name}
+              isInternal={isSelectedEmployeeInternal}
+              employeeDetails={employeeDetailQuery.data}
+              isEmployeeDetailsLoading={employeeDetailQuery.isLoading}
+              office365Profile={office365ProfileQuery.data?.profile}
+              office365Photo={office365ProfileQuery.data?.photo}
+              isOffice365Loading={office365ProfileQuery.isLoading}
+              isOffice365ProfileMissing={
+                office365ProfileQuery.isSuccess && !office365ProfileQuery.data
+              }
+              office365ErrorMessage={
+                office365ProfileQuery.isError ? office365ProfileQuery.error.message : undefined
+              }
+              onOpenChange={(open) => {
+                if (!open) setSelectedEmployeeId(null);
               }}
-            >
-              <DialogSurface className={styles.dialogSurface}>
-                <DialogBody>
-                  <DialogTitle>
-                    {filteredEmployees.find((e) => e.id === selectedEmployeeId)?.name ??
-                      'Employee Detail'}
-                  </DialogTitle>
-                  <DialogContent className={styles.dialogContent}>
-                    {isSelectedEmployeeInternal && (
-                      <aside className={styles.profilePanel}>
-                        {office365ProfileQuery.isLoading && (
-                          <Skeleton className={styles.profileSkeleton} animation="wave">
-                            <SkeletonItem shape="circle" size={96} />
-                            <SkeletonItem size={24} />
-                            <SkeletonItem size={16} />
-                            <SkeletonItem size={16} />
-                            <SkeletonItem size={16} />
-                          </Skeleton>
-                        )}
-                        {office365ProfileQuery.data?.photo && (
-                          <img
-                            className={styles.profilePhoto}
-                            src={office365ProfileQuery.data.photo}
-                            alt=""
-                          />
-                        )}
-                        {office365ProfileQuery.data?.profile && (
-                          <>
-                            <Text weight="semibold">
-                              {office365ProfileQuery.data.profile.displayName}
-                            </Text>
-                            {office365ProfileQuery.data.profile.jobTitle && (
-                              <Text>{office365ProfileQuery.data.profile.jobTitle}</Text>
-                            )}
-                            {office365ProfileQuery.data.profile.department && (
-                              <Text>{office365ProfileQuery.data.profile.department}</Text>
-                            )}
-                            {office365ProfileQuery.data.profile.officeLocation && (
-                              <Text>{office365ProfileQuery.data.profile.officeLocation}</Text>
-                            )}
-                            {office365ProfileQuery.data.profile.mail && (
-                              <Text>{office365ProfileQuery.data.profile.mail}</Text>
-                            )}
-                            {office365ProfileQuery.data.profile.mobilePhone && (
-                              <Text>{office365ProfileQuery.data.profile.mobilePhone}</Text>
-                            )}
-                            {office365ProfileQuery.data.profile.businessPhones?.map((phone) => (
-                              <Text key={phone}>{phone}</Text>
-                            ))}
-                          </>
-                        )}
-                        {office365ProfileQuery.isSuccess && !office365ProfileQuery.data && (
-                          <Text>Geen Office 365-profiel gevonden.</Text>
-                        )}
-                        {office365ProfileQuery.isError && (
-                          <Text>
-                            Office 365-gegevens konden niet worden geladen:{' '}
-                            {office365ProfileQuery.error.message}
-                          </Text>
-                        )}
-                      </aside>
-                    )}
-
-                    <div>
-                      {employeeDetailQuery.isLoading && (
-                        <Skeleton className={styles.detailSkeleton} animation="wave">
-                          <SkeletonItem size={28} />
-                          {Array.from({ length: 5 }, (_, rowIndex) => (
-                            <SkeletonItem key={rowIndex} size={40} />
-                          ))}
-                        </Skeleton>
-                      )}
-
-                      {employeeDetailQuery.data && (
-                        <div className={styles.tableWrapper}>
-                          <table className={styles.table}>
-                            <thead>
-                              <tr>
-                                <th className={styles.th}>Week</th>
-                                <th className={styles.th}></th>
-                                <th className={styles.th}>Uren totaal</th>
-                                <th className={styles.th}>Ingezet</th>
-                                <th className={styles.th}>Details</th>
-                              </tr>
-                            </thead>
-                            <tbody>
-                              {employeeDetailQuery.data.weeks.map((w) => (
-                                <tr key={w.week_nr}>
-                                  <td className={styles.td}>W{w.week_nr}</td>
-                                  <td className={styles.td}>{w.monday}</td>
-                                  <td className={styles.td}>{w.total_hours}</td>
-                                  <td className={styles.td}>
-                                    {w.is_fully_assigned ? 'Yes' : 'No'}
-                                  </td>
-                                  <td className={styles.td}>
-                                    {w.week_uren.map((u, idx) => (
-                                      <div key={idx}>
-                                        {
-                                          getSegmentDisplay(
-                                            u,
-                                            employeeDetailQuery.data?.department_category ===
-                                              'Intern',
-                                          ).label
-                                        }
-                                        : {u.hours}h{u.project_name ? ` — ${u.project_name}` : ''}
-                                      </div>
-                                    ))}
-                                  </td>
-                                </tr>
-                              ))}
-                            </tbody>
-                          </table>
-                        </div>
-                      )}
-                    </div>
-                  </DialogContent>
-                  <DialogActions>
-                    <DialogTrigger disableButtonEnhancement>
-                      <Button appearance="secondary" onClick={() => setSelectedEmployeeId(null)}>
-                        Close
-                      </Button>
-                    </DialogTrigger>
-                  </DialogActions>
-                </DialogBody>
-              </DialogSurface>
-            </Dialog>
+            />
           </>
         )}
       </main>
