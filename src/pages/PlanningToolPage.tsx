@@ -47,28 +47,34 @@ const useStyles = makeStyles({
     ...shorthands.border('1px', 'solid', tokens.colorNeutralStroke2),
     ...shorthands.borderRadius(tokens.borderRadiusLarge),
   },
-  table: {
+  planningGrid: {
     width: '100%',
-    borderCollapse: 'collapse',
+    minWidth: '760px',
     fontSize: tokens.fontSizeBase200,
   },
-  th: {
+  planningGridRow: {
+    display: 'grid',
+  },
+  planningGridHeader: {
+    backgroundColor: tokens.colorNeutralBackground2,
+  },
+  planningGridHeaderCell: {
     textAlign: 'left',
     ...shorthands.padding('10px', '12px'),
-    backgroundColor: tokens.colorNeutralBackground2,
     color: tokens.colorNeutralForeground2,
     fontWeight: tokens.fontWeightSemibold,
-    position: 'sticky',
-    top: 0,
     whiteSpace: 'nowrap',
   },
-  td: {
+  planningGridCell: {
     ...shorthands.padding('8px', '12px'),
     ...shorthands.borderTop('1px', 'solid', tokens.colorNeutralStroke2),
     whiteSpace: 'nowrap',
   },
+  employeeNameCell: {
+    cursor: 'pointer',
+  },
   weekCell: {
-    ...shorthands.padding('4px', '6px'),
+    ...shorthands.padding('4px', '0px'),
     minWidth: '110px',
   },
   barTrack: {
@@ -386,6 +392,8 @@ export default function PlanningToolPage() {
     ).sort();
   }, [data]);
 
+  const planningGridColumns = `minmax(160px, 1fr) 80px repeat(${filteredEmployees[0]?.weeks.length ?? 0}, minmax(110px, 1fr))`;
+
   return (
     <div className={styles.container}>
       <PlanningFilter
@@ -430,43 +438,61 @@ export default function PlanningToolPage() {
         {data && (
           <>
             <div className={styles.tableWrapper}>
-              <table className={styles.table}>
-                <thead>
-                  <tr>
-                    <th className={styles.th}>Naam</th>
-                    <th className={styles.th}>Uren</th>
-                    {filteredEmployees[0]?.weeks.map((w) => (
-                      <th key={w.week_nr} className={styles.th}>
-                        W{w.week_nr}
-                      </th>
-                    ))}
-                  </tr>
-                </thead>
-                <tbody>
-                  {filteredEmployees.map((employee) => (
-                    <tr>
-                      <td
-                        className={styles.td}
-                        key={employee.id}
-                        onClick={() => setSelectedEmployeeId(employee.id)}
-                        style={{ cursor: 'pointer' }}
-                      >
-                        {employee.name}
-                      </td>
-                      <td className={styles.td}>{employee.hours_per_week}</td>
-                      {employee.weeks.map((w) => (
-                        <td key={w.week_nr} className={`${styles.td} ${styles.weekCell}`}>
-                          <WeekBar
-                            week={w}
-                            hoursPerWeek={employee.hours_per_week}
-                            isIntern={employee.department_category === 'Intern'}
-                          />
-                        </td>
-                      ))}
-                    </tr>
+              <div className={styles.planningGrid} role="grid">
+                <div
+                  className={`${styles.planningGridRow} ${styles.planningGridHeader}`}
+                  role="row"
+                  style={{ gridTemplateColumns: planningGridColumns }}
+                >
+                  <div className={styles.planningGridHeaderCell} role="columnheader">
+                    Naam
+                  </div>
+                  <div className={styles.planningGridHeaderCell} role="columnheader">
+                    Uren
+                  </div>
+                  {filteredEmployees[0]?.weeks.map((week) => (
+                    <div
+                      className={styles.planningGridHeaderCell}
+                      key={week.week_nr}
+                      role="columnheader"
+                    >
+                      W{week.week_nr}
+                    </div>
                   ))}
-                </tbody>
-              </table>
+                </div>
+                {filteredEmployees.map((employee) => (
+                  <div
+                    className={styles.planningGridRow}
+                    key={employee.id}
+                    role="row"
+                    style={{ gridTemplateColumns: planningGridColumns }}
+                  >
+                    <div
+                      className={`${styles.planningGridCell} ${styles.employeeNameCell}`}
+                      role="gridcell"
+                      onClick={() => setSelectedEmployeeId(employee.id)}
+                    >
+                      {employee.name}
+                    </div>
+                    <div className={styles.planningGridCell} role="gridcell">
+                      {employee.hours_per_week}
+                    </div>
+                    {employee.weeks.map((week) => (
+                      <div
+                        className={`${styles.planningGridCell} ${styles.weekCell}`}
+                        key={week.week_nr}
+                        role="gridcell"
+                      >
+                        <WeekBar
+                          week={week}
+                          hoursPerWeek={employee.hours_per_week}
+                          isIntern={employee.department_category === 'Intern'}
+                        />
+                      </div>
+                    ))}
+                  </div>
+                ))}
+              </div>
             </div>
 
             <div className={styles.summaryRow}>
