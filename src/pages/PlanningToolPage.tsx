@@ -20,10 +20,7 @@ import {
   DialogActions,
   DialogTrigger,
 } from '@fluentui/react-components';
-import {
-  ChevronLeftRegular,
-  ChevronRightRegular,
-} from '@fluentui/react-icons';
+import { ChevronLeftRegular, ChevronRightRegular } from '@fluentui/react-icons';
 import { useMemo, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import {
@@ -89,7 +86,7 @@ const useStyles = makeStyles({
   bottomAction: {
     ...shorthands.margin('20px', '0', '0'),
   },
-  
+
   tableWrapper: {
     width: '100%',
     maxWidth: '100%',
@@ -143,13 +140,12 @@ const useStyles = makeStyles({
   },
   summaryRow: {
     display: 'flex',
-   
+
     ...shorthands.gap('8px'),
     ...shorthands.padding('8px', '0'),
     alignItems: 'center',
     fontSize: tokens.fontSizeBase200,
     color: tokens.colorNeutralForeground2,
-
   },
   legendRow: {
     display: 'flex',
@@ -250,17 +246,29 @@ const useStyles = makeStyles({
 
 // Colors per hour type, matching the legacy tool's legend: 🟢 assignment · ⬜ reserved · 🟠 available · 🟣 holiday
 const TYPE_COLORS: Record<Uursoort, { background: string; foreground: string }> = {
-  inzet: { background: tokens.colorPaletteLightGreenBackground2, foreground: tokens.colorPaletteLightGreenForeground2 },
-  reservering: { background: tokens.colorNeutralBackground3, foreground: tokens.colorNeutralForeground2 },
+  inzet: {
+    background: tokens.colorPaletteLightGreenBackground2,
+    foreground: tokens.colorPaletteLightGreenForeground2,
+  },
+  reservering: {
+    background: tokens.colorNeutralBackground3,
+    foreground: tokens.colorNeutralForeground2,
+  },
   beschikbaar: { background: '#cfe4fa', foreground: tokens.colorPalettePeachForeground2 },
-  feestdag: { background: tokens.colorPaletteGrapeBackground2, foreground: tokens.colorPaletteGrapeForeground2 },
+  feestdag: {
+    background: tokens.colorPaletteGrapeBackground2,
+    foreground: tokens.colorPaletteGrapeForeground2,
+  },
 };
 
 type WeekUrenEntry = { type: Uursoort; hours: number; project_name?: string | null };
 
 // Reservering hours for internal employees represent vacation, not a generic reservation —
 // relabel and color it like a holiday so it's visually distinct in the timeline.
-function getSegmentDisplay(u: WeekUrenEntry, isIntern: boolean): { label: string; background: string; foreground: string } {
+function getSegmentDisplay(
+  u: WeekUrenEntry,
+  isIntern: boolean,
+): { label: string; background: string; foreground: string } {
   if (u.type === 'reservering' && u.hours > 8 && isIntern) {
     return { label: 'Vakantie', ...TYPE_COLORS.feestdag };
   }
@@ -296,7 +304,15 @@ function withTimeout<T>(request: Promise<T>, message: string): Promise<T> {
 // Renders each week as a horizontal bar split into segments per week_uren entry, sized
 // proportionally to hours, so leave/holiday/multiple projects within one week stay visible
 // (matches the ClockWise API's per-day breakdown, e.g. 4h reservering + 36h inzet in one week).
-function WeekBar({ week, hoursPerWeek, isIntern }: { week: WeekAvailability; hoursPerWeek: number; isIntern: boolean }) {
+function WeekBar({
+  week,
+  hoursPerWeek,
+  isIntern,
+}: {
+  week: WeekAvailability;
+  hoursPerWeek: number;
+  isIntern: boolean;
+}) {
   const styles = useStyles();
   const denominator = Math.max(week.total_hours, hoursPerWeek, 1);
 
@@ -305,7 +321,11 @@ function WeekBar({ week, hoursPerWeek, isIntern }: { week: WeekAvailability; hou
       <div className={styles.barTrack} title="No hours registered">
         <div
           className={styles.barSegment}
-          style={{ width: '100%', backgroundColor: tokens.colorNeutralBackground2, color: tokens.colorNeutralForeground2 }}
+          style={{
+            width: '100%',
+            backgroundColor: tokens.colorNeutralBackground2,
+            color: tokens.colorNeutralForeground2,
+          }}
         >
           {week.total_hours || 0}
         </div>
@@ -366,8 +386,22 @@ export default function PlanningToolPage() {
   const [selectedEmployeeId, setSelectedEmployeeId] = useState<number | null>(null);
 
   const availabilityQuery = useQuery({
-    queryKey: ['planning-tool', 'availability', week, year, weeksToShow, department, departmentName],
-    queryFn: () => PlanningToolService.getAvailability({ week, year, weeks: weeksToShow, department: department || undefined }),
+    queryKey: [
+      'planning-tool',
+      'availability',
+      week,
+      year,
+      weeksToShow,
+      department,
+      departmentName,
+    ],
+    queryFn: () =>
+      PlanningToolService.getAvailability({
+        week,
+        year,
+        weeks: weeksToShow,
+        department: department || undefined,
+      }),
   });
 
   const departmentsQuery = useQuery({
@@ -375,15 +409,15 @@ export default function PlanningToolPage() {
     queryFn: () => PlanningToolService.getDepartments(),
   });
 
-
-
   const employeeDetailQuery = useQuery({
     queryKey: ['planning-tool', 'employee', selectedEmployeeId],
     queryFn: () => PlanningToolService.getEmployeeAvailability(selectedEmployeeId as number),
     enabled: selectedEmployeeId !== null,
   });
 
-  const selectedEmployee = availabilityQuery.data?.employees.find((employee) => employee.id === selectedEmployeeId);
+  const selectedEmployee = availabilityQuery.data?.employees.find(
+    (employee) => employee.id === selectedEmployeeId,
+  );
   const isSelectedEmployeeInternal = selectedEmployee?.department_category === 'Intern';
 
   const office365ProfileQuery = useQuery({
@@ -393,10 +427,14 @@ export default function PlanningToolPage() {
         Office365UsersService.SearchUserV2(selectedEmployee?.name, 10, true),
         'Office 365-profiel kon niet worden geladen.',
       );
-      if (!searchResult.success) throw searchResult.error ?? new Error('Office 365-profiel kon niet worden geladen.');
+      if (!searchResult.success)
+        throw searchResult.error ?? new Error('Office 365-profiel kon niet worden geladen.');
 
       const office365User = searchResult.data?.value?.find(
-        (user) => user.DisplayName?.localeCompare(selectedEmployee?.name ?? '', undefined, { sensitivity: 'accent' }) === 0,
+        (user) =>
+          user.DisplayName?.localeCompare(selectedEmployee?.name ?? '', undefined, {
+            sensitivity: 'accent',
+          }) === 0,
       );
 
       if (!office365User) return null;
@@ -408,7 +446,8 @@ export default function PlanningToolPage() {
         ),
         'Office 365-profiel kon niet worden geladen.',
       );
-      if (!profileResult.success) throw profileResult.error ?? new Error('Office 365-profiel kon niet worden geladen.');
+      if (!profileResult.success)
+        throw profileResult.error ?? new Error('Office 365-profiel kon niet worden geladen.');
 
       let photo: string | undefined;
       try {
@@ -430,33 +469,27 @@ export default function PlanningToolPage() {
   const data = availabilityQuery.data;
 
   const filteredEmployees = useMemo(() => {
-  if (!data) return [];
+    if (!data) return [];
 
-  return data.employees.filter((employee: EmployeeAvailability) => {
-    if (
-      searchTerm.trim() &&
-      !employee.name.toLowerCase().includes(searchTerm.trim().toLowerCase())
-    ) {
-      return false;
-    }
+    return data.employees.filter((employee: EmployeeAvailability) => {
+      if (
+        searchTerm.trim() &&
+        !employee.name.toLowerCase().includes(searchTerm.trim().toLowerCase())
+      ) {
+        return false;
+      }
 
-    if (
-      hideFullyAssigned &&
-      employee.weeks.every((w) => w.is_fully_assigned)
-    ) {
-      return false;
-    }
+      if (hideFullyAssigned && employee.weeks.every((w) => w.is_fully_assigned)) {
+        return false;
+      }
 
-    if (
-      departmentName &&
-      employee.department_name !== departmentName
-    ) {
-      return false;
-    }
+      if (departmentName && employee.department_name !== departmentName) {
+        return false;
+      }
 
-    return true;
-  });
-}, [data, searchTerm, hideFullyAssigned, departmentName]);
+      return true;
+    });
+  }, [data, searchTerm, hideFullyAssigned, departmentName]);
 
   const handleWeekShift = (delta: number) => {
     const baseWeek = week ?? data?.week_start;
@@ -468,28 +501,27 @@ export default function PlanningToolPage() {
   };
 
   const departmentNames = useMemo(() => {
-  if (!data) return [];
+    if (!data) return [];
 
-  return Array.from(
-    new Set(
-      data.employees
-        .map((employee) => employee.department_name)
-        .filter((name): name is string => !!name)
-    )
-  ).sort();
-}, [data]);
+    return Array.from(
+      new Set(
+        data.employees
+          .map((employee) => employee.department_name)
+          .filter((name): name is string => !!name),
+      ),
+    ).sort();
+  }, [data]);
 
   return (
-    
     <div className={styles.container}>
-        
       {/* Filters sidebar */}
       <aside className={styles.sidebar}>
-        <Text weight="semibold" size={400}>Filters</Text>
+        <Text weight="semibold" size={400}>
+          Filters
+        </Text>
 
         <div className={styles.filterGroup}>
           <div className={styles.weekNav}>
-          
             <Button
               className={styles.weekNavButtonLeft}
               icon={<ChevronLeftRegular />}
@@ -497,7 +529,8 @@ export default function PlanningToolPage() {
               onClick={() => handleWeekShift(-1)}
               disabled={!data}
               aria-label="Previous week"
-            /> <span className={styles.weekLabel}>Week</span>
+            />{' '}
+            <span className={styles.weekLabel}>Week</span>
             <span className={styles.weekValue}>
               {data ? `${data.week_start} | ${data.year}` : '—'}
             </span>
@@ -539,28 +572,26 @@ export default function PlanningToolPage() {
           onChange={(_, dataCheckbox) => setHideFullyAssigned(!!dataCheckbox.checked)}
         />
         <div className={styles.filterGroup}>
-        <span className={styles.filterLabel}>Unit: </span>
+          <span className={styles.filterLabel}>Unit: </span>
 
-        <Dropdown
+          <Dropdown
             className={styles.orangeInput}
             value={departmentName || 'All'}
             selectedOptions={departmentName ? [departmentName] : []}
             onOptionSelect={(_, optionData) => {
-            setDepartmentName(
-                optionData.optionValue === 'All'
-                ? undefined
-                : optionData.optionValue
-            );
+              setDepartmentName(
+                optionData.optionValue === 'All' ? undefined : optionData.optionValue,
+              );
             }}
-        >
+          >
             <Option value="All">All</Option>
 
             {departmentNames.map((name) => (
-            <Option key={name} value={name}>
+              <Option key={name} value={name}>
                 {name}
-            </Option>
+              </Option>
             ))}
-        </Dropdown>
+          </Dropdown>
         </div>
 
         <div className={styles.filterGroup}>
@@ -569,39 +600,42 @@ export default function PlanningToolPage() {
             className={styles.orangeInput}
             value={department || 'All'}
             selectedOptions={[department]}
-            onOptionSelect={(_, optionData) => setDepartment(optionData.optionValue === 'All' ? '' : optionData.optionValue ?? '')}
+            onOptionSelect={(_, optionData) =>
+              setDepartment(optionData.optionValue === 'All' ? '' : (optionData.optionValue ?? ''))
+            }
           >
             <Option value="All">All</Option>
             {departmentsQuery.data?.map((dept) => (
-              <Option key={dept} value={dept}>{dept}</Option>
+              <Option key={dept} value={dept}>
+                {dept}
+              </Option>
             ))}
           </Dropdown>
         </div>
 
         {data && (
           <div className={styles.summaryRow}>
-            {filteredEmployees.length} employees · {data.num_weeks} weeks from W{data.week_start} <br /> Last refreshed{' '}
-            {new Date(data.generated_at).toLocaleTimeString()}
+            {filteredEmployees.length} employees · {data.num_weeks} weeks from W{data.week_start}{' '}
+            <br /> Last refreshed {new Date(data.generated_at).toLocaleTimeString()}
           </div>
-      )} 
+        )}
       </aside>
 
       {/* Main content */}
       <main className={styles.main}>
-        
-        {availabilityQuery.isLoading && (
-          <PlanningSkeleton />
-        )}
+        {availabilityQuery.isLoading && <PlanningSkeleton />}
 
         {data?.source === 'mock' && (
           <Badge appearance="tint" color="warning" style={{ marginBottom: '16px' }}>
-            Showing sample data — the planning tool API isn't reachable from here (uvicorn api.main:app --reload runs only locally).
+            Showing sample data — the planning tool API isn't reachable from here (uvicorn
+            api.main:app --reload runs only locally).
           </Badge>
         )}
 
         {availabilityQuery.isError && (
           <Badge appearance="tint" color="danger">
-            Failed to load data from the planning tool API. Make sure it's running locally (uvicorn api.main:app --reload).
+            Failed to load data from the planning tool API. Make sure it's running locally (uvicorn
+            api.main:app --reload).
           </Badge>
         )}
 
@@ -614,24 +648,31 @@ export default function PlanningToolPage() {
                     <th className={styles.th}>Naam</th>
                     <th className={styles.th}>Uren</th>
                     {filteredEmployees[0]?.weeks.map((w) => (
-                      <th key={w.week_nr} className={styles.th}>W{w.week_nr}</th>
+                      <th key={w.week_nr} className={styles.th}>
+                        W{w.week_nr}
+                      </th>
                     ))}
                   </tr>
                 </thead>
                 <tbody>
                   {filteredEmployees.map((employee) => (
                     <tr>
-                      <td 
-                      className={styles.td}  
-                      key={employee.id}
-                      onClick={() => setSelectedEmployeeId(employee.id)}
-                      style={{ cursor: 'pointer' }}>
+                      <td
+                        className={styles.td}
+                        key={employee.id}
+                        onClick={() => setSelectedEmployeeId(employee.id)}
+                        style={{ cursor: 'pointer' }}
+                      >
                         {employee.name}
                       </td>
                       <td className={styles.td}>{employee.hours_per_week}</td>
                       {employee.weeks.map((w) => (
                         <td key={w.week_nr} className={`${styles.td} ${styles.weekCell}`}>
-                          <WeekBar week={w} hoursPerWeek={employee.hours_per_week} isIntern={employee.department_category === 'Intern'} />
+                          <WeekBar
+                            week={w}
+                            hoursPerWeek={employee.hours_per_week}
+                            isIntern={employee.department_category === 'Intern'}
+                          />
                         </td>
                       ))}
                     </tr>
@@ -641,30 +682,37 @@ export default function PlanningToolPage() {
             </div>
 
             <div className={styles.summaryRow}>
-              <span className={styles.summaryRow} style={{ marginLeft: '16px' }}>    
+              <span className={styles.summaryRow} style={{ marginLeft: '16px' }}>
                 <span className={styles.legendItem}>
-                  <span className={styles.legendSwatch} style={{ backgroundColor: TYPE_COLORS.inzet.background }} />
+                  <span
+                    className={styles.legendSwatch}
+                    style={{ backgroundColor: TYPE_COLORS.inzet.background }}
+                  />
                   Opdracht / Inzet
-                  
                 </span>
                 <span className={styles.legendItem}>
-                  <span className={styles.legendSwatch} style={{ backgroundColor: TYPE_COLORS.reservering.background }} />
+                  <span
+                    className={styles.legendSwatch}
+                    style={{ backgroundColor: TYPE_COLORS.reservering.background }}
+                  />
                   Gereserveerd
                 </span>
                 <span className={styles.legendItem}>
-                  <span className={styles.legendSwatch} style={{ backgroundColor: TYPE_COLORS.beschikbaar.background }} />
+                  <span
+                    className={styles.legendSwatch}
+                    style={{ backgroundColor: TYPE_COLORS.beschikbaar.background }}
+                  />
                   Beschikbaar
                 </span>
                 <span className={styles.legendItem}>
-                  <span className={styles.legendSwatch} style={{ backgroundColor: TYPE_COLORS.feestdag.background }} />
+                  <span
+                    className={styles.legendSwatch}
+                    style={{ backgroundColor: TYPE_COLORS.feestdag.background }}
+                  />
                   Vakantie
                 </span>
               </span>
-              
             </div>
-
-            <Button className={styles.bottomAction}>Wietze</Button>
-
 
             <Dialog
               open={selectedEmployeeId !== null}
@@ -675,12 +723,12 @@ export default function PlanningToolPage() {
               <DialogSurface className={styles.dialogSurface}>
                 <DialogBody>
                   <DialogTitle>
-                    {filteredEmployees.find((e) => e.id === selectedEmployeeId)?.name ?? 'Employee Detail'}
+                    {filteredEmployees.find((e) => e.id === selectedEmployeeId)?.name ??
+                      'Employee Detail'}
                   </DialogTitle>
                   <DialogContent className={styles.dialogContent}>
                     {isSelectedEmployeeInternal && (
                       <aside className={styles.profilePanel}>
-                        <Text weight="semibold">Office 365</Text>
                         {office365ProfileQuery.isLoading && (
                           <Skeleton className={styles.profileSkeleton} animation="wave">
                             <SkeletonItem shape="circle" size={96} />
@@ -691,17 +739,35 @@ export default function PlanningToolPage() {
                           </Skeleton>
                         )}
                         {office365ProfileQuery.data?.photo && (
-                          <img className={styles.profilePhoto} src={office365ProfileQuery.data.photo} alt="" />
+                          <img
+                            className={styles.profilePhoto}
+                            src={office365ProfileQuery.data.photo}
+                            alt=""
+                          />
                         )}
                         {office365ProfileQuery.data?.profile && (
                           <>
-                            <Text weight="semibold">{office365ProfileQuery.data.profile.displayName}</Text>
-                            {office365ProfileQuery.data.profile.jobTitle && <Text>{office365ProfileQuery.data.profile.jobTitle}</Text>}
-                            {office365ProfileQuery.data.profile.department && <Text>{office365ProfileQuery.data.profile.department}</Text>}
-                            {office365ProfileQuery.data.profile.officeLocation && <Text>{office365ProfileQuery.data.profile.officeLocation}</Text>}
-                            {office365ProfileQuery.data.profile.mail && <Text>{office365ProfileQuery.data.profile.mail}</Text>}
-                            {office365ProfileQuery.data.profile.mobilePhone && <Text>{office365ProfileQuery.data.profile.mobilePhone}</Text>}
-                            {office365ProfileQuery.data.profile.businessPhones?.map((phone) => <Text key={phone}>{phone}</Text>)}
+                            <Text weight="semibold">
+                              {office365ProfileQuery.data.profile.displayName}
+                            </Text>
+                            {office365ProfileQuery.data.profile.jobTitle && (
+                              <Text>{office365ProfileQuery.data.profile.jobTitle}</Text>
+                            )}
+                            {office365ProfileQuery.data.profile.department && (
+                              <Text>{office365ProfileQuery.data.profile.department}</Text>
+                            )}
+                            {office365ProfileQuery.data.profile.officeLocation && (
+                              <Text>{office365ProfileQuery.data.profile.officeLocation}</Text>
+                            )}
+                            {office365ProfileQuery.data.profile.mail && (
+                              <Text>{office365ProfileQuery.data.profile.mail}</Text>
+                            )}
+                            {office365ProfileQuery.data.profile.mobilePhone && (
+                              <Text>{office365ProfileQuery.data.profile.mobilePhone}</Text>
+                            )}
+                            {office365ProfileQuery.data.profile.businessPhones?.map((phone) => (
+                              <Text key={phone}>{phone}</Text>
+                            ))}
                           </>
                         )}
                         {office365ProfileQuery.isSuccess && !office365ProfileQuery.data && (
@@ -709,59 +775,71 @@ export default function PlanningToolPage() {
                         )}
                         {office365ProfileQuery.isError && (
                           <Text>
-                            Office 365-gegevens konden niet worden geladen: {office365ProfileQuery.error.message}
+                            Office 365-gegevens konden niet worden geladen:{' '}
+                            {office365ProfileQuery.error.message}
                           </Text>
                         )}
                       </aside>
                     )}
 
                     <div>
-                    {employeeDetailQuery.isLoading && (
-                      <Skeleton className={styles.detailSkeleton} animation="wave">
-                        <SkeletonItem size={28} />
-                        {Array.from({ length: 5 }, (_, rowIndex) => (
-                          <SkeletonItem key={rowIndex} size={40} />
-                        ))}
-                      </Skeleton>
-                    )}
+                      {employeeDetailQuery.isLoading && (
+                        <Skeleton className={styles.detailSkeleton} animation="wave">
+                          <SkeletonItem size={28} />
+                          {Array.from({ length: 5 }, (_, rowIndex) => (
+                            <SkeletonItem key={rowIndex} size={40} />
+                          ))}
+                        </Skeleton>
+                      )}
 
-                    {employeeDetailQuery.data && (
-                      <div className={styles.tableWrapper}>
-                        <table className={styles.table}>
-                          <thead>
-                            <tr>
-                              <th className={styles.th}>Week</th>
-                              <th className={styles.th}></th>
-                              <th className={styles.th}>Uren totaal</th>
-                              <th className={styles.th}>Ingezet</th>
-                              <th className={styles.th}>Details</th>
-                            </tr>
-                          </thead>
-                          <tbody>
-                            {employeeDetailQuery.data.weeks.map((w) => (
-                              <tr key={w.week_nr}>
-                                <td className={styles.td}>W{w.week_nr}</td>
-                                <td className={styles.td}>{w.monday}</td>
-                                <td className={styles.td}>{w.total_hours}</td>
-                                <td className={styles.td}>{w.is_fully_assigned ? 'Yes' : 'No'}</td>
-                                <td className={styles.td}>
-                                  {w.week_uren.map((u, idx) => (
-                                    <div key={idx}>
-                                      {getSegmentDisplay(u, employeeDetailQuery.data?.department_category === 'Intern').label}: {u.hours}h{u.project_name ? ` — ${u.project_name}` : ''}
-                                    </div>
-                                  ))}
-                                </td>
+                      {employeeDetailQuery.data && (
+                        <div className={styles.tableWrapper}>
+                          <table className={styles.table}>
+                            <thead>
+                              <tr>
+                                <th className={styles.th}>Week</th>
+                                <th className={styles.th}></th>
+                                <th className={styles.th}>Uren totaal</th>
+                                <th className={styles.th}>Ingezet</th>
+                                <th className={styles.th}>Details</th>
                               </tr>
-                            ))}
-                          </tbody>
-                        </table>
-                      </div>
-                    )}
+                            </thead>
+                            <tbody>
+                              {employeeDetailQuery.data.weeks.map((w) => (
+                                <tr key={w.week_nr}>
+                                  <td className={styles.td}>W{w.week_nr}</td>
+                                  <td className={styles.td}>{w.monday}</td>
+                                  <td className={styles.td}>{w.total_hours}</td>
+                                  <td className={styles.td}>
+                                    {w.is_fully_assigned ? 'Yes' : 'No'}
+                                  </td>
+                                  <td className={styles.td}>
+                                    {w.week_uren.map((u, idx) => (
+                                      <div key={idx}>
+                                        {
+                                          getSegmentDisplay(
+                                            u,
+                                            employeeDetailQuery.data?.department_category ===
+                                              'Intern',
+                                          ).label
+                                        }
+                                        : {u.hours}h{u.project_name ? ` — ${u.project_name}` : ''}
+                                      </div>
+                                    ))}
+                                  </td>
+                                </tr>
+                              ))}
+                            </tbody>
+                          </table>
+                        </div>
+                      )}
                     </div>
                   </DialogContent>
                   <DialogActions>
                     <DialogTrigger disableButtonEnhancement>
-                      <Button appearance="secondary" onClick={() => setSelectedEmployeeId(null)}>Close</Button>
+                      <Button appearance="secondary" onClick={() => setSelectedEmployeeId(null)}>
+                        Close
+                      </Button>
                     </DialogTrigger>
                   </DialogActions>
                 </DialogBody>
