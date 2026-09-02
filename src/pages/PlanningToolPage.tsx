@@ -8,8 +8,6 @@ import {
   Input,
   Checkbox,
   Slider,
-  Dropdown,
-  Option,
   Button,
   Badge,
   Dialog,
@@ -31,6 +29,8 @@ import {
   type WeekAvailability,
 } from '../services/planningToolService';
 import { Office365UsersService } from '../generated';
+import FilterDropdown from '../components/FilterDropdown';
+import Legenda from '../components/Legenda';
 
 const useStyles = makeStyles({
   container: {
@@ -146,30 +146,6 @@ const useStyles = makeStyles({
     alignItems: 'center',
     fontSize: tokens.fontSizeBase200,
     color: tokens.colorNeutralForeground2,
-  },
-  legendRow: {
-    display: 'flex',
-    flexWrap: 'wrap',
-    ...shorthands.gap('16px'),
-    ...shorthands.padding('8px', '0'),
-  },
-  legendRowAside: {
-    display: 'flex',
-    flexWrap: 'wrap',
-    fontSize: tokens.fontSizeBase100,
-    ...shorthands.gap('16px'),
-    ...shorthands.padding('8px', '0'),
-  },
-  legendItem: {
-    display: 'flex',
-    alignItems: 'center',
-    ...shorthands.gap('8px'),
-    fontSize: tokens.fontSizeBase200,
-  },
-  legendSwatch: {
-    width: '14px',
-    height: '14px',
-    ...shorthands.borderRadius(tokens.borderRadiusSmall),
   },
   loadingContainer: {
     display: 'flex',
@@ -572,45 +548,23 @@ export default function PlanningToolPage() {
           onChange={(_, dataCheckbox) => setHideFullyAssigned(!!dataCheckbox.checked)}
         />
         <div className={styles.filterGroup}>
-          <span className={styles.filterLabel}>Unit: </span>
-
-          <Dropdown
+          <FilterDropdown
+            label="Unit:"
+            options={departmentNames}
             className={styles.orangeInput}
             value={departmentName || 'All'}
-            selectedOptions={departmentName ? [departmentName] : []}
-            onOptionSelect={(_, optionData) => {
-              setDepartmentName(
-                optionData.optionValue === 'All' ? undefined : optionData.optionValue,
-              );
-            }}
-          >
-            <Option value="All">All</Option>
-
-            {departmentNames.map((name) => (
-              <Option key={name} value={name}>
-                {name}
-              </Option>
-            ))}
-          </Dropdown>
+            onValueChange={(value) => setDepartmentName(value === 'All' ? undefined : value)}
+          />
         </div>
 
         <div className={styles.filterGroup}>
-          <span className={styles.filterLabel}>Type:</span>
-          <Dropdown
+          <FilterDropdown
+            label="Type:"
+            options={departmentsQuery.data ?? []}
             className={styles.orangeInput}
             value={department || 'All'}
-            selectedOptions={[department]}
-            onOptionSelect={(_, optionData) =>
-              setDepartment(optionData.optionValue === 'All' ? '' : (optionData.optionValue ?? ''))
-            }
-          >
-            <Option value="All">All</Option>
-            {departmentsQuery.data?.map((dept) => (
-              <Option key={dept} value={dept}>
-                {dept}
-              </Option>
-            ))}
-          </Dropdown>
+            onValueChange={(value) => setDepartment(value === 'All' ? '' : value)}
+          />
         </div>
 
         {data && (
@@ -663,7 +617,7 @@ export default function PlanningToolPage() {
                         onClick={() => setSelectedEmployeeId(employee.id)}
                         style={{ cursor: 'pointer' }}
                       >
-                        {employee.name}
+                        {employee.id} - {employee.name}
                       </td>
                       <td className={styles.td}>{employee.hours_per_week}</td>
                       {employee.weeks.map((w) => (
@@ -682,36 +636,7 @@ export default function PlanningToolPage() {
             </div>
 
             <div className={styles.summaryRow}>
-              <span className={styles.summaryRow} style={{ marginLeft: '16px' }}>
-                <span className={styles.legendItem}>
-                  <span
-                    className={styles.legendSwatch}
-                    style={{ backgroundColor: TYPE_COLORS.inzet.background }}
-                  />
-                  Opdracht / Inzet
-                </span>
-                <span className={styles.legendItem}>
-                  <span
-                    className={styles.legendSwatch}
-                    style={{ backgroundColor: TYPE_COLORS.reservering.background }}
-                  />
-                  Gereserveerd
-                </span>
-                <span className={styles.legendItem}>
-                  <span
-                    className={styles.legendSwatch}
-                    style={{ backgroundColor: TYPE_COLORS.beschikbaar.background }}
-                  />
-                  Beschikbaar
-                </span>
-                <span className={styles.legendItem}>
-                  <span
-                    className={styles.legendSwatch}
-                    style={{ backgroundColor: TYPE_COLORS.feestdag.background }}
-                  />
-                  Vakantie
-                </span>
-              </span>
+              <Legenda />
             </div>
 
             <Dialog
