@@ -11,10 +11,6 @@ import {
   Option,
   Button,
   Badge,
-  Accordion,
-  AccordionItem,
-  AccordionHeader,
-  AccordionPanel,
   Dialog,
   DialogSurface,
   DialogBody,
@@ -88,8 +84,15 @@ const useStyles = makeStyles({
   main: {
     minWidth: 0,
   },
+  bottomAction: {
+    ...shorthands.margin('20px', '0', '0'),
+  },
+  
   tableWrapper: {
+    width: '100%',
+    maxWidth: '100%',
     overflowX: 'auto',
+    overflowY: 'hidden',
     ...shorthands.border('1px', 'solid', tokens.colorNeutralStroke2),
     ...shorthands.borderRadius(tokens.borderRadiusLarge),
   },
@@ -137,13 +140,25 @@ const useStyles = makeStyles({
     ...shorthands.borderRight('1px', 'solid', tokens.colorNeutralBackground1),
   },
   summaryRow: {
-    marginTop: '16px',
+    display: 'flex',
+   
+    ...shorthands.gap('8px'),
+    ...shorthands.padding('8px', '0'),
+    alignItems: 'center',
     fontSize: tokens.fontSizeBase200,
     color: tokens.colorNeutralForeground2,
+
   },
   legendRow: {
     display: 'flex',
     flexWrap: 'wrap',
+    ...shorthands.gap('16px'),
+    ...shorthands.padding('8px', '0'),
+  },
+  legendRowAside: {
+    display: 'flex',
+    flexWrap: 'wrap',
+    fontSize: tokens.fontSizeBase100,
     ...shorthands.gap('16px'),
     ...shorthands.padding('8px', '0'),
   },
@@ -166,6 +181,27 @@ const useStyles = makeStyles({
   dialogSurface: {
     maxWidth: '60vw',
     width: '60vw',
+  },
+  orangeSlider: {
+    '& .fui-Slider__activeTrack': {
+      backgroundColor: tokens.colorPalettePeachBorderActive,
+    },
+    '& .fui-Slider__thumb': {
+      backgroundColor: tokens.colorPalettePeachBorderActive,
+    },
+    '& .fui-Slider__progress': {
+      backgroundColor: tokens.colorPalettePeachBorderActive,
+    },
+    '--fui-Slider__progress--color': tokens.colorPalettePeachBorderActive,
+  },
+  orangeInput: {
+    '&:hover::after': {
+      borderBottomColor: tokens.colorPalettePeachBorderActive,
+    },
+
+    '&:focus-within::after': {
+      borderBottomColor: tokens.colorPalettePeachBorderActive,
+    },
   },
 });
 
@@ -353,15 +389,17 @@ export default function PlanningToolPage() {
           <span className={styles.filterLabel}>Aantal weken om te tonen: {weeksToShow}</span>
           <Slider
             min={1}
-            max={7}
+            max={12}
             value={weeksToShow}
+            className={styles.orangeSlider}
             onChange={(_, dataSlider) => setWeeksToShow(dataSlider.value)}
           />
         </div>
 
         <div className={styles.filterGroup}>
-          <span className={styles.filterLabel}>Search employee name</span>
+          <span className={styles.filterLabel}>Zoeken:</span>
           <Input
+            className={styles.orangeInput}
             value={searchTerm}
             onChange={(_, dataInput) => setSearchTerm(dataInput.value)}
             placeholder="e.g. Bart"
@@ -369,29 +407,15 @@ export default function PlanningToolPage() {
         </div>
 
         <Checkbox
-          label="Hide fully assigned employees"
+          label="Verberg volledig ingeplande medewerkers"
           checked={hideFullyAssigned}
           onChange={(_, dataCheckbox) => setHideFullyAssigned(!!dataCheckbox.checked)}
         />
-
         <div className={styles.filterGroup}>
-          <span className={styles.filterLabel}>Contract</span>
-          <Dropdown
-            value={department || 'All'}
-            selectedOptions={[department]}
-            onOptionSelect={(_, optionData) => setDepartment(optionData.optionValue === 'All' ? '' : optionData.optionValue ?? '')}
-          >
-            <Option value="All">All</Option>
-            {departmentsQuery.data?.map((dept) => (
-              <Option key={dept} value={dept}>{dept}</Option>
-            ))}
-          </Dropdown>
-        </div>
-
-        <div className={styles.filterGroup}>
-        <span className={styles.filterLabel}>Unit </span>
+        <span className={styles.filterLabel}>Unit: </span>
 
         <Dropdown
+            className={styles.orangeInput}
             value={departmentName || 'All'}
             selectedOptions={departmentName ? [departmentName] : []}
             onOptionSelect={(_, optionData) => {
@@ -411,8 +435,28 @@ export default function PlanningToolPage() {
             ))}
         </Dropdown>
         </div>
-            
 
+        <div className={styles.filterGroup}>
+          <span className={styles.filterLabel}>Type:</span>
+          <Dropdown
+            className={styles.orangeInput}
+            value={department || 'All'}
+            selectedOptions={[department]}
+            onOptionSelect={(_, optionData) => setDepartment(optionData.optionValue === 'All' ? '' : optionData.optionValue ?? '')}
+          >
+            <Option value="All">All</Option>
+            {departmentsQuery.data?.map((dept) => (
+              <Option key={dept} value={dept}>{dept}</Option>
+            ))}
+          </Dropdown>
+        </div>
+
+        {data && (
+          <div className={styles.summaryRow}>
+            {filteredEmployees.length} employees · {data.num_weeks} weeks from W{data.week_start} <br /> Last refreshed{' '}
+            {new Date(data.generated_at).toLocaleTimeString()}
+          </div>
+      )} 
       </aside>
 
       {/* Main content */}
@@ -443,27 +487,22 @@ export default function PlanningToolPage() {
                 <thead>
                   <tr>
                     <th className={styles.th}>Naam</th>
-                    <th className={styles.th}>
-                    {filteredEmployees[0]?.department_category === 'Intern'
-                        ? 'PeM'
-                        : 'Contract'}
-                    </th>
-                    <th className={styles.th}>Contract uren</th>
+                    <th className={styles.th}>Uren</th>
                     {filteredEmployees[0]?.weeks.map((w) => (
                       <th key={w.week_nr} className={styles.th}>W{w.week_nr}</th>
                     ))}
                   </tr>
                 </thead>
                 <tbody>
-               
                   {filteredEmployees.map((employee) => (
-                    <tr
+                    <tr>
+                      <td 
+                      className={styles.td}  
                       key={employee.id}
                       onClick={() => setSelectedEmployeeId(employee.id)}
-                      style={{ cursor: 'pointer' }}
-                    >
-                      <td className={styles.td}>{employee.name}</td>
-                      <td className={styles.td}>{employee.department_name ?? '-'}</td>
+                      style={{ cursor: 'pointer' }}>
+                        {employee.name}
+                      </td>
                       <td className={styles.td}>{employee.hours_per_week}</td>
                       {employee.weeks.map((w) => (
                         <td key={w.week_nr} className={`${styles.td} ${styles.weekCell}`}>
@@ -476,36 +515,31 @@ export default function PlanningToolPage() {
               </table>
             </div>
 
-            <Text className={styles.summaryRow}>
-              {filteredEmployees.length} employees · {data.num_weeks} weeks from W{data.week_start} · Last refreshed{' '}
-              {new Date(data.generated_at).toLocaleTimeString()}
-            </Text>
+            <div className={styles.summaryRow}>
+              <span className={styles.summaryRow} style={{ marginLeft: '16px' }}>    
+                <span className={styles.legendItem}>
+                  <span className={styles.legendSwatch} style={{ backgroundColor: TYPE_COLORS.inzet.background }} />
+                  Opdracht / Inzet
+                  
+                </span>
+                <span className={styles.legendItem}>
+                  <span className={styles.legendSwatch} style={{ backgroundColor: TYPE_COLORS.reservering.background }} />
+                  Gereserveerd
+                </span>
+                <span className={styles.legendItem}>
+                  <span className={styles.legendSwatch} style={{ backgroundColor: TYPE_COLORS.beschikbaar.background }} />
+                  Beschikbaar
+                </span>
+                <span className={styles.legendItem}>
+                  <span className={styles.legendSwatch} style={{ backgroundColor: TYPE_COLORS.feestdag.background }} />
+                  Vakantie
+                </span>
+              </span>
+              
+            </div>
 
-            <Accordion collapsible>
-              <AccordionItem value="legend">
-                <AccordionHeader>Legenda</AccordionHeader>
-                <AccordionPanel>
-                  <div className={styles.legendRow}>
-                    <span className={styles.legendItem}>
-                      <span className={styles.legendSwatch} style={{ backgroundColor: TYPE_COLORS.inzet.background }} />
-                      Opdracht / Inzet
-                    </span>
-                    <span className={styles.legendItem}>
-                      <span className={styles.legendSwatch} style={{ backgroundColor: TYPE_COLORS.reservering.background }} />
-                      Gereserveerd
-                    </span>
-                    <span className={styles.legendItem}>
-                      <span className={styles.legendSwatch} style={{ backgroundColor: TYPE_COLORS.beschikbaar.background }} />
-                      Beschikbaar
-                    </span>
-                    <span className={styles.legendItem}>
-                      <span className={styles.legendSwatch} style={{ backgroundColor: TYPE_COLORS.feestdag.background }} />
-                      Vakantie
-                    </span>
-                  </div>
-                </AccordionPanel>
-              </AccordionItem>
-            </Accordion>
+            <Button className={styles.bottomAction}>Wietze</Button>
+
 
             <Dialog
               open={selectedEmployeeId !== null}
