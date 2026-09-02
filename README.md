@@ -140,7 +140,13 @@ Dit voert uit: `concurrently -n vite,pac -c blue,green "vite" "pac code run"`.
 https://apps.powerapps.com/play/e/<environment-id>/app/local?_localAppUrl=http://localhost:3000&_localConnectionUrl=http://localhost:8080
 ```
 
-**Open altijd deze play-URL** in de browser om te testen — niet `http://localhost:3000` direct.
+Voor dit project is de lokale URL:
+
+```
+https://apps.powerapps.com/play/e/87f264fa-239c-eee5-a7f6-58a7e77c4353/app/local?_localAppUrl=http://localhost:3000&_localConnectionUrl=http://localhost:8080
+```
+
+**Open altijd deze play-URL** in de browser om te testen — niet `http://localhost:3000` direct. De Office 365 Users-connector werkt alleen binnen de Power Apps-player met de lokale connection-proxy op poort `8080`.
 
 ---
 

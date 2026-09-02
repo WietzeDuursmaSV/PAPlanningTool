@@ -26,9 +26,9 @@ interface MockEmployee {
 
 const MOCK_EMPLOYEES: MockEmployee[] = [
   { id: 1, name: 'Vincent van Gogh', department_category: 'Intern', department_name: 'Direct mdw', contract_type: 'fulltime', hours_per_week: 40, reserveHours: 4, projectCode: 'P010001-01-100', projectClient: 'Contoso' },
-  { id: 2, name: 'Claude Monet', department_category: 'Intern', department_name: 'Direct mdw', contract_type: 'fulltime', hours_per_week: 40, reserveHours: 4, projectCode: 'P010002-01-100', projectClient: 'Fabrikam' },
+  { id: 2, name: 'Wietze Duursma', department_category: 'Intern', department_name: 'Direct mdw', contract_type: 'fulltime', hours_per_week: 40, reserveHours: 4, projectCode: 'P010002-01-100', projectClient: 'Fabrikam' },
   { id: 3, name: 'Frida Kahlo', department_category: 'Business', department_name: 'Business Unit', contract_type: 'parttime', hours_per_week: 32, reserveHours: 4, projectCode: 'P010003-01-100', projectClient: 'Northwind Traders' },
-  { id: 4, name: 'Pablo Picasso', department_category: 'Intern', department_name: 'Direct mdw', contract_type: 'fulltime', hours_per_week: 40, reserveHours: 8, projectCode: 'P010004-01-100', projectClient: 'Adventure Works' },
+  { id: 4, name: 'Joost Kiel', department_category: 'Intern', department_name: 'Direct mdw', contract_type: 'fulltime', hours_per_week: 40, reserveHours: 8, projectCode: 'P010004-01-100', projectClient: 'Adventure Works' },
   { id: 5, name: 'Rembrandt van Rijn', department_category: 'Intern', department_name: 'Direct mdw', contract_type: 'fulltime', hours_per_week: 40, reserveHours: 0, projectCode: 'P010005-01-100', projectClient: 'Tailwind Traders' },
   { id: 6, name: 'Johannes Vermeer', department_category: 'Extern', department_name: 'Externen', contract_type: 'fulltime', hours_per_week: 0, reserveHours: 0, projectCode: '', projectClient: '' },
   { id: 7, name: 'Georgia O\u2019Keeffe', department_category: 'Extern', department_name: 'Externen', contract_type: 'fulltime', hours_per_week: 0, reserveHours: 0, projectCode: '', projectClient: '' },

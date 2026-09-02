@@ -3,7 +3,8 @@ import {
   shorthands,
   tokens,
   Text,
-  Spinner,
+  Skeleton,
+  SkeletonItem,
   Input,
   Checkbox,
   Slider,
@@ -32,6 +33,7 @@ import {
   type Uursoort,
   type WeekAvailability,
 } from '../services/planningToolService';
+import { Office365UsersService } from '../generated';
 
 const useStyles = makeStyles({
   container: {
@@ -178,9 +180,50 @@ const useStyles = makeStyles({
     justifyContent: 'center',
     ...shorthands.padding('48px', '0'),
   },
+  planningSkeleton: {
+    display: 'flex',
+    flexDirection: 'column',
+    ...shorthands.gap('16px'),
+    ...shorthands.padding('16px'),
+  },
+  planningSkeletonRow: {
+    display: 'grid',
+    gridTemplateColumns: 'minmax(120px, 1fr) 72px repeat(5, minmax(72px, 1fr))',
+    ...shorthands.gap('12px'),
+    alignItems: 'center',
+  },
+  profileSkeleton: {
+    display: 'flex',
+    flexDirection: 'column',
+    ...shorthands.gap('12px'),
+  },
+  detailSkeleton: {
+    display: 'flex',
+    flexDirection: 'column',
+    ...shorthands.gap('16px'),
+  },
   dialogSurface: {
     maxWidth: '60vw',
     width: '60vw',
+  },
+  dialogContent: {
+    display: 'grid',
+    gridTemplateColumns: 'minmax(180px, 240px) minmax(0, 1fr)',
+    ...shorthands.gap('24px'),
+    '@media (max-width: 700px)': {
+      gridTemplateColumns: '1fr',
+    },
+  },
+  profilePanel: {
+    display: 'flex',
+    flexDirection: 'column',
+    ...shorthands.gap('8px'),
+  },
+  profilePhoto: {
+    width: '96px',
+    height: '96px',
+    objectFit: 'cover',
+    ...shorthands.borderRadius('50%'),
   },
   orangeSlider: {
     '& .fui-Slider__activeTrack': {
@@ -230,6 +273,26 @@ function weekTooltip(u: WeekUrenEntry, isIntern: boolean): string {
   return `${label}: ${u.hours}h${u.project_name ? ` — ${u.project_name}` : ''}`;
 }
 
+function toOffice365PhotoUrl(photo: string): string {
+  return photo.startsWith('data:') ? photo : `data:image/jpeg;base64,${photo}`;
+}
+
+function withTimeout<T>(request: Promise<T>, message: string): Promise<T> {
+  return new Promise((resolve, reject) => {
+    const timeoutId = window.setTimeout(() => reject(new Error(message)), 10000);
+    request.then(
+      (result) => {
+        window.clearTimeout(timeoutId);
+        resolve(result);
+      },
+      (error: unknown) => {
+        window.clearTimeout(timeoutId);
+        reject(error);
+      },
+    );
+  });
+}
+
 // Renders each week as a horizontal bar split into segments per week_uren entry, sized
 // proportionally to hours, so leave/holiday/multiple projects within one week stay visible
 // (matches the ClockWise API's per-day breakdown, e.g. 4h reservering + 36h inzet in one week).
@@ -270,6 +333,26 @@ function WeekBar({ week, hoursPerWeek, isIntern }: { week: WeekAvailability; hou
   );
 }
 
+function PlanningSkeleton() {
+  const styles = useStyles();
+
+  return (
+    <div className={styles.tableWrapper} aria-label="Planning laden">
+      <Skeleton className={styles.planningSkeleton} animation="wave">
+        {Array.from({ length: 6 }, (_, rowIndex) => (
+          <div className={styles.planningSkeletonRow} key={rowIndex}>
+            <SkeletonItem size={20} />
+            <SkeletonItem size={20} />
+            {Array.from({ length: 5 }, (_, columnIndex) => (
+              <SkeletonItem key={columnIndex} size={28} />
+            ))}
+          </div>
+        ))}
+      </Skeleton>
+    </div>
+  );
+}
+
 export default function PlanningToolPage() {
   const styles = useStyles();
 
@@ -298,6 +381,50 @@ export default function PlanningToolPage() {
     queryKey: ['planning-tool', 'employee', selectedEmployeeId],
     queryFn: () => PlanningToolService.getEmployeeAvailability(selectedEmployeeId as number),
     enabled: selectedEmployeeId !== null,
+  });
+
+  const selectedEmployee = availabilityQuery.data?.employees.find((employee) => employee.id === selectedEmployeeId);
+  const isSelectedEmployeeInternal = selectedEmployee?.department_category === 'Intern';
+
+  const office365ProfileQuery = useQuery({
+    queryKey: ['office365-user', selectedEmployee?.name],
+    queryFn: async () => {
+      const searchResult = await withTimeout(
+        Office365UsersService.SearchUserV2(selectedEmployee?.name, 10, true),
+        'Office 365-profiel kon niet worden geladen.',
+      );
+      if (!searchResult.success) throw searchResult.error ?? new Error('Office 365-profiel kon niet worden geladen.');
+
+      const office365User = searchResult.data?.value?.find(
+        (user) => user.DisplayName?.localeCompare(selectedEmployee?.name ?? '', undefined, { sensitivity: 'accent' }) === 0,
+      );
+
+      if (!office365User) return null;
+
+      const profileResult = await withTimeout(
+        Office365UsersService.UserProfile_V2(
+          office365User.Id,
+          'displayName,jobTitle,department,mail,mobilePhone,businessPhones,officeLocation',
+        ),
+        'Office 365-profiel kon niet worden geladen.',
+      );
+      if (!profileResult.success) throw profileResult.error ?? new Error('Office 365-profiel kon niet worden geladen.');
+
+      let photo: string | undefined;
+      try {
+        const photoResult = await withTimeout(
+          Office365UsersService.UserPhoto_V2(office365User.Id),
+          'Office 365-foto kon niet worden geladen.',
+        );
+        if (photoResult.success && photoResult.data) photo = toOffice365PhotoUrl(photoResult.data);
+      } catch {
+        // A missing or unavailable photo must not prevent profile details from displaying.
+      }
+
+      return { profile: profileResult.data, photo };
+    },
+    enabled: isSelectedEmployeeInternal && !!selectedEmployee?.name,
+    retry: false,
   });
 
   const data = availabilityQuery.data;
@@ -463,9 +590,7 @@ export default function PlanningToolPage() {
       <main className={styles.main}>
         
         {availabilityQuery.isLoading && (
-          <div className={styles.loadingContainer}>
-            <Spinner size="medium" label="Loading planning data..." />
-          </div>
+          <PlanningSkeleton />
         )}
 
         {data?.source === 'mock' && (
@@ -552,11 +677,52 @@ export default function PlanningToolPage() {
                   <DialogTitle>
                     {filteredEmployees.find((e) => e.id === selectedEmployeeId)?.name ?? 'Employee Detail'}
                   </DialogTitle>
-                  <DialogContent>
+                  <DialogContent className={styles.dialogContent}>
+                    {isSelectedEmployeeInternal && (
+                      <aside className={styles.profilePanel}>
+                        <Text weight="semibold">Office 365</Text>
+                        {office365ProfileQuery.isLoading && (
+                          <Skeleton className={styles.profileSkeleton} animation="wave">
+                            <SkeletonItem shape="circle" size={96} />
+                            <SkeletonItem size={24} />
+                            <SkeletonItem size={16} />
+                            <SkeletonItem size={16} />
+                            <SkeletonItem size={16} />
+                          </Skeleton>
+                        )}
+                        {office365ProfileQuery.data?.photo && (
+                          <img className={styles.profilePhoto} src={office365ProfileQuery.data.photo} alt="" />
+                        )}
+                        {office365ProfileQuery.data?.profile && (
+                          <>
+                            <Text weight="semibold">{office365ProfileQuery.data.profile.displayName}</Text>
+                            {office365ProfileQuery.data.profile.jobTitle && <Text>{office365ProfileQuery.data.profile.jobTitle}</Text>}
+                            {office365ProfileQuery.data.profile.department && <Text>{office365ProfileQuery.data.profile.department}</Text>}
+                            {office365ProfileQuery.data.profile.officeLocation && <Text>{office365ProfileQuery.data.profile.officeLocation}</Text>}
+                            {office365ProfileQuery.data.profile.mail && <Text>{office365ProfileQuery.data.profile.mail}</Text>}
+                            {office365ProfileQuery.data.profile.mobilePhone && <Text>{office365ProfileQuery.data.profile.mobilePhone}</Text>}
+                            {office365ProfileQuery.data.profile.businessPhones?.map((phone) => <Text key={phone}>{phone}</Text>)}
+                          </>
+                        )}
+                        {office365ProfileQuery.isSuccess && !office365ProfileQuery.data && (
+                          <Text>Geen Office 365-profiel gevonden.</Text>
+                        )}
+                        {office365ProfileQuery.isError && (
+                          <Text>
+                            Office 365-gegevens konden niet worden geladen: {office365ProfileQuery.error.message}
+                          </Text>
+                        )}
+                      </aside>
+                    )}
+
+                    <div>
                     {employeeDetailQuery.isLoading && (
-                      <div className={styles.loadingContainer}>
-                        <Spinner size="small" label="Loading employee detail..." />
-                      </div>
+                      <Skeleton className={styles.detailSkeleton} animation="wave">
+                        <SkeletonItem size={28} />
+                        {Array.from({ length: 5 }, (_, rowIndex) => (
+                          <SkeletonItem key={rowIndex} size={40} />
+                        ))}
+                      </Skeleton>
                     )}
 
                     {employeeDetailQuery.data && (
@@ -591,6 +757,7 @@ export default function PlanningToolPage() {
                         </table>
                       </div>
                     )}
+                    </div>
                   </DialogContent>
                   <DialogActions>
                     <DialogTrigger disableButtonEnhancement>
