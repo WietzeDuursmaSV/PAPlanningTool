@@ -2,16 +2,10 @@ import {
   makeStyles,
   shorthands,
   tokens,
-  Text,
   Skeleton,
   SkeletonItem,
-  Input,
-  Checkbox,
-  Slider,
-  Button,
   Badge,
 } from '@fluentui/react-components';
-import { ChevronLeftRegular, ChevronRightRegular } from '@fluentui/react-icons';
 import { useMemo, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import {
@@ -22,9 +16,9 @@ import {
   type WeekAvailability,
 } from '../services/planningToolService';
 import { Office365UsersService } from '../generated';
-import FilterDropdown from '../components/FilterDropdown';
 import Legenda from '../components/Legenda';
 import PlanningDetails from '../components/PlanningDetails';
+import PlanningFilter from '../components/PlanningFilter';
 
 const useStyles = makeStyles({
   container: {
@@ -37,42 +31,6 @@ const useStyles = makeStyles({
     '@media (max-width: 900px)': {
       gridTemplateColumns: '1fr',
     },
-  },
-  sidebar: {
-    display: 'flex',
-    flexDirection: 'column',
-    ...shorthands.gap('20px'),
-  },
-  filterGroup: {
-    display: 'flex',
-    flexDirection: 'column',
-    ...shorthands.gap('8px'),
-  },
-  filterLabel: {
-    fontSize: tokens.fontSizeBase300,
-    fontWeight: tokens.fontWeightSemibold,
-    color: tokens.colorNeutralForeground1,
-  },
-  weekNav: {
-    display: 'flex',
-    alignItems: 'center',
-    ...shorthands.gap('8px'),
-  },
-  weekNavButtonLeft: {
-    display: 'flex',
-    justifyContent: 'flex-start',
-    ...shorthands.padding('0'),
-  },
-  weekNavButtonRight: {
-    display: 'flex',
-    justifyContent: 'flex-end',
-    ...shorthands.padding('0'),
-  },
-  weekLabel: {
-    fontSize: tokens.fontSizeBase300,
-  },
-  weekValue: {
-    fontSize: tokens.fontSizeBase300,
   },
   main: {
     minWidth: 0,
@@ -157,27 +115,6 @@ const useStyles = makeStyles({
     gridTemplateColumns: 'minmax(120px, 1fr) 72px repeat(5, minmax(72px, 1fr))',
     ...shorthands.gap('12px'),
     alignItems: 'center',
-  },
-  orangeSlider: {
-    '& .fui-Slider__activeTrack': {
-      backgroundColor: tokens.colorPalettePeachBorderActive,
-    },
-    '& .fui-Slider__thumb': {
-      backgroundColor: tokens.colorPalettePeachBorderActive,
-    },
-    '& .fui-Slider__progress': {
-      backgroundColor: tokens.colorPalettePeachBorderActive,
-    },
-    '--fui-Slider__progress--color': tokens.colorPalettePeachBorderActive,
-  },
-  orangeInput: {
-    '&:hover::after': {
-      borderBottomColor: tokens.colorPalettePeachBorderActive,
-    },
-
-    '&:focus-within::after': {
-      borderBottomColor: tokens.colorPalettePeachBorderActive,
-    },
   },
 });
 
@@ -451,90 +388,26 @@ export default function PlanningToolPage() {
 
   return (
     <div className={styles.container}>
-      {/* Filters sidebar */}
-      <aside className={styles.sidebar}>
-        <Text weight="semibold" size={400}>
-          Filters
-        </Text>
-
-        <div className={styles.filterGroup}>
-          <div className={styles.weekNav}>
-            <Button
-              className={styles.weekNavButtonLeft}
-              icon={<ChevronLeftRegular />}
-              appearance="subtle"
-              onClick={() => handleWeekShift(-1)}
-              disabled={!data}
-              aria-label="Previous week"
-            />{' '}
-            <span className={styles.weekLabel}>Week</span>
-            <span className={styles.weekValue}>
-              {data ? `${data.week_start} | ${data.year}` : '—'}
-            </span>
-            <Button
-              className={styles.weekNavButtonRight}
-              icon={<ChevronRightRegular />}
-              appearance="subtle"
-              onClick={() => handleWeekShift(1)}
-              disabled={!data}
-              aria-label="Next week"
-            />
-          </div>
-        </div>
-
-        <div className={styles.filterGroup}>
-          <span className={styles.filterLabel}>Aantal weken om te tonen: {weeksToShow}</span>
-          <Slider
-            min={1}
-            max={12}
-            value={weeksToShow}
-            className={styles.orangeSlider}
-            onChange={(_, dataSlider) => setWeeksToShow(dataSlider.value)}
-          />
-        </div>
-
-        <div className={styles.filterGroup}>
-          <span className={styles.filterLabel}>Zoeken:</span>
-          <Input
-            className={styles.orangeInput}
-            value={searchTerm}
-            onChange={(_, dataInput) => setSearchTerm(dataInput.value)}
-            placeholder="e.g. Bart"
-          />
-        </div>
-
-        <Checkbox
-          label="Verberg volledig ingeplande medewerkers"
-          checked={hideFullyAssigned}
-          onChange={(_, dataCheckbox) => setHideFullyAssigned(!!dataCheckbox.checked)}
-        />
-        <div className={styles.filterGroup}>
-          <FilterDropdown
-            label="Unit:"
-            options={departmentNames}
-            className={styles.orangeInput}
-            value={departmentName || 'All'}
-            onValueChange={(value) => setDepartmentName(value === 'All' ? undefined : value)}
-          />
-        </div>
-
-        <div className={styles.filterGroup}>
-          <FilterDropdown
-            label="Type:"
-            options={departmentsQuery.data ?? []}
-            className={styles.orangeInput}
-            value={department || 'All'}
-            onValueChange={(value) => setDepartment(value === 'All' ? '' : value)}
-          />
-        </div>
-
-        {data && (
-          <div className={styles.summaryRow}>
-            {filteredEmployees.length} employees · {data.num_weeks} weeks from W{data.week_start}{' '}
-            <br /> Last refreshed {new Date(data.generated_at).toLocaleTimeString()}
-          </div>
-        )}
-      </aside>
+      <PlanningFilter
+        week={data?.week_start}
+        year={data?.year}
+        weeksToShow={weeksToShow}
+        searchTerm={searchTerm}
+        hideFullyAssigned={hideFullyAssigned}
+        departmentName={departmentName}
+        department={department}
+        departmentNames={departmentNames}
+        departments={departmentsQuery.data ?? []}
+        employeeCount={data ? filteredEmployees.length : undefined}
+        totalWeeks={data?.num_weeks}
+        generatedAt={data?.generated_at}
+        onWeekShift={handleWeekShift}
+        onWeeksToShowChange={setWeeksToShow}
+        onSearchTermChange={setSearchTerm}
+        onHideFullyAssignedChange={setHideFullyAssigned}
+        onDepartmentNameChange={setDepartmentName}
+        onDepartmentChange={setDepartment}
+      />
 
       {/* Main content */}
       <main className={styles.main}>
@@ -578,7 +451,7 @@ export default function PlanningToolPage() {
                         onClick={() => setSelectedEmployeeId(employee.id)}
                         style={{ cursor: 'pointer' }}
                       >
-                        {employee.id} - {employee.name}
+                        {employee.name}
                       </td>
                       <td className={styles.td}>{employee.hours_per_week}</td>
                       {employee.weeks.map((w) => (
