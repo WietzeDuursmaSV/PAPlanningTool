@@ -127,11 +127,7 @@ export default function PlanningGrid({ employees, onEmployeeSelect }: PlanningGr
                 key={week.week_nr}
                 role="gridcell"
               >
-                <WeekBar
-                  week={week}
-                  hoursPerWeek={employee.hours_per_week}
-                  isInternal={employee.department_category === 'Intern'}
-                />
+                <WeekBar week={week} hoursPerWeek={employee.hours_per_week} />
               </div>
             ))}
           </div>

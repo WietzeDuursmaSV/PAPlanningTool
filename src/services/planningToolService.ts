@@ -8,7 +8,8 @@
  */
 
 // Configurable via VITE_PLANNING_API_BASE_URL, defaults to the local dev server.
-const BASE_URL = (import.meta.env.VITE_PLANNING_API_BASE_URL as string | undefined) ?? 'http://localhost:8000';
+const BASE_URL =
+  (import.meta.env.VITE_PLANNING_API_BASE_URL as string | undefined) ?? 'http://localhost:8000';
 
 export type Uursoort = 'feestdag' | 'reservering' | 'inzet' | 'beschikbaar';
 
@@ -39,6 +40,36 @@ export interface EmployeeAvailability {
   weeks: WeekAvailability[];
 }
 
+export interface EmployeeAssignment {
+  internal_id: number;
+  project_id: number;
+  employee_id: number;
+  status: string;
+  start_date: string;
+  end_date?: string | null;
+  hours_budget?: number | null;
+  hours_per_week: number;
+  project: {
+    internal_id: number;
+    name: string;
+    code?: string | null;
+  };
+}
+
+export interface EmployeeDetails {
+  internal_id: number;
+  name: string;
+  login: string;
+  function?: string | null;
+  start_date: string;
+  end_date?: string | null;
+  hours_per_week: number;
+  contract_type: string;
+  status: string;
+  department_id: number;
+  assignments: EmployeeAssignment[];
+}
+
 export interface AvailabilityResponse {
   week_start: number;
   year: number;
@@ -54,10 +85,12 @@ export interface GetAvailabilityParams {
   year?: number;
   weeks?: number;
   department?: string;
-
 }
 
-async function getJson<T>(path: string, params?: Record<string, string | number | undefined>): Promise<T> {
+async function getJson<T>(
+  path: string,
+  params?: Record<string, string | number | undefined>,
+): Promise<T> {
   const url = new URL(path, BASE_URL);
   if (params) {
     for (const [key, value] of Object.entries(params)) {
@@ -84,7 +117,6 @@ export const PlanningToolService = {
         year: params.year,
         weeks: params.weeks,
         department: params.department,
-     
       });
     } catch {
       // API not reachable (e.g. running inside Power Apps without access to localhost) — show mock data instead.
@@ -109,6 +141,10 @@ export const PlanningToolService = {
     }
   },
 
+  async getEmployeeDetails(employeeId: number): Promise<EmployeeDetails> {
+    return getJson<EmployeeDetails>(`/employees/${employeeId}`);
+  },
+
   async getDepartments(): Promise<string[]> {
     try {
       return await getJson<string[]>('/departments');
@@ -126,7 +162,11 @@ function isoWeeksInYear(year: number): number {
 }
 
 /** Shifts an ISO (week, year) pair by `delta` weeks, rolling over into adjacent years. */
-export function shiftIsoWeek(week: number, year: number, delta: number): { week: number; year: number } {
+export function shiftIsoWeek(
+  week: number,
+  year: number,
+  delta: number,
+): { week: number; year: number } {
   let w = week + delta;
   let y = year;
 

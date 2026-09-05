@@ -40,8 +40,8 @@ const useStyles = makeStyles({
   },
 });
 
-function getSegmentDisplay(type: Uursoort, hours: number, isInternal: boolean) {
-  if (type === 'reservering' && hours > 8 && isInternal) {
+function getSegmentDisplay(type: Uursoort, hours: number) {
+  if (type === 'reservering' && hours >= 8) {
     return { label: 'Vakantie', ...TYPE_COLORS.feestdag };
   }
   return { label: type, ...TYPE_COLORS[type] };
@@ -50,11 +50,9 @@ function getSegmentDisplay(type: Uursoort, hours: number, isInternal: boolean) {
 export default function WeekBar({
   week,
   hoursPerWeek,
-  isInternal,
 }: {
   week: WeekAvailability;
   hoursPerWeek: number;
-  isInternal: boolean;
 }) {
   const styles = useStyles();
   const denominator = Math.max(week.total_hours, hoursPerWeek, 1);
@@ -72,7 +70,7 @@ export default function WeekBar({
   return (
     <div className={styles.track}>
       {week.week_uren.map((entry, index) => {
-        const display = getSegmentDisplay(entry.type, entry.hours, isInternal);
+        const display = getSegmentDisplay(entry.type, entry.hours);
         return (
           <div
             className={styles.segment}

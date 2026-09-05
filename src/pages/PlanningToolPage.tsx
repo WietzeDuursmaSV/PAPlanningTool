@@ -37,6 +37,7 @@ export default function PlanningToolPage() {
   const styles = useStyles();
   const {
     availabilityQuery,
+    isAssignmentTimelineLoading,
     departments,
     weeksToShow,
     setWeeksToShow,
@@ -85,7 +86,7 @@ export default function PlanningToolPage() {
       />
 
       <main className={styles.main}>
-        {availabilityQuery.isLoading && <PlanningGridSkeleton />}
+        {(availabilityQuery.isLoading || isAssignmentTimelineLoading) && <PlanningGridSkeleton />}
 
         {data?.source === 'mock' && (
           <Badge appearance="tint" className={styles.message} color="warning">
@@ -99,7 +100,7 @@ export default function PlanningToolPage() {
           </Badge>
         )}
 
-        {data && (
+        {data && !isAssignmentTimelineLoading && (
           <>
             <PlanningGrid employees={filteredEmployees} onEmployeeSelect={setSelectedEmployeeId} />
             <div className={styles.legend}>

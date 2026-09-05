@@ -4,7 +4,10 @@ import { Office365UsersService } from '../generated';
 import {
   PlanningToolService,
   shiftIsoWeek,
+  type EmployeeAssignment,
   type EmployeeAvailability,
+  type EmployeeDetails,
+  type WeekAvailability,
 } from '../services/planningToolService';
 
 function toOffice365PhotoUrl(photo: string): string {
@@ -25,6 +28,64 @@ function withTimeout<T>(request: Promise<T>, message: string): Promise<T> {
       },
     );
   });
+}
+
+function weekEnd(monday: string): string {
+  const date = new Date(`${monday}T00:00:00Z`);
+  date.setUTCDate(date.getUTCDate() + 6);
+  return date.toISOString().slice(0, 10);
+}
+
+function overlapsWeek(assignment: EmployeeAssignment, week: WeekAvailability): boolean {
+  return (
+    assignment.start_date <= weekEnd(week.monday) &&
+    (!assignment.end_date || assignment.end_date >= week.monday)
+  );
+}
+
+function buildAssignmentTimeline(
+  employee: EmployeeAvailability,
+  details: EmployeeDetails,
+): EmployeeAvailability {
+  return {
+    ...employee,
+    weeks: employee.weeks.map((week) => {
+      const reservations = week.week_uren.filter((entry) => entry.type === 'reservering');
+      const reservedHours = reservations.reduce(
+        (total, reservation) => total + reservation.hours,
+        0,
+      );
+      const hasVacationReservation = reservations.some((reservation) => reservation.hours >= 8);
+      const assignments = hasVacationReservation
+        ? []
+        : details.assignments.filter(
+            (assignment) => assignment.hours_per_week > 0 && overlapsWeek(assignment, week),
+          );
+      const assignedHours = assignments.reduce(
+        (total, assignment) => total + assignment.hours_per_week,
+        0,
+      );
+      const availableHours = Math.max(employee.hours_per_week - reservedHours - assignedHours, 0);
+
+      return {
+        ...week,
+        total_hours: reservedHours + assignedHours + availableHours,
+        is_fully_assigned:
+          employee.hours_per_week > 0 && reservedHours + assignedHours >= employee.hours_per_week,
+        week_uren: [
+          ...reservations,
+          ...assignments.map((assignment) => ({
+            type: 'inzet' as const,
+            hours: assignment.hours_per_week,
+            project_id: assignment.project_id,
+            project_code: assignment.project.code,
+            project_name: assignment.project.name,
+          })),
+          ...(availableHours > 0 ? [{ type: 'beschikbaar' as const, hours: availableHours }] : []),
+        ],
+      };
+    }),
+  };
 }
 
 export function usePlanningData() {
@@ -60,6 +121,37 @@ export function usePlanningData() {
   });
 
   const data = availabilityQuery.data;
+  const employeeDetailsQuery = useQuery({
+    queryKey: ['planning-tool', 'employee-details', data?.employees.map((employee) => employee.id)],
+    queryFn: async () => {
+      if (!data) return new Map<number, EmployeeDetails>();
+
+      const results = await Promise.allSettled(
+        data.employees.map(async (employee) => ({
+          employeeId: employee.id,
+          details: await PlanningToolService.getEmployeeDetails(employee.id),
+        })),
+      );
+
+      return new Map(
+        results.flatMap((result) =>
+          result.status === 'fulfilled'
+            ? [[result.value.employeeId, result.value.details] as const]
+            : [],
+        ),
+      );
+    },
+    enabled: !!data && data.source !== 'mock',
+  });
+
+  const employeesWithAssignmentTimeline = useMemo(() => {
+    if (!data || !employeeDetailsQuery.data) return data?.employees ?? [];
+    return data.employees.map((employee) => {
+      const details = employeeDetailsQuery.data.get(employee.id);
+      return details ? buildAssignmentTimeline(employee, details) : employee;
+    });
+  }, [data, employeeDetailsQuery.data]);
+
   const selectedEmployee = data?.employees.find((employee) => employee.id === selectedEmployeeId);
   const isSelectedEmployeeInternal = selectedEmployee?.department_category === 'Intern';
 
@@ -113,7 +205,7 @@ export function usePlanningData() {
   const filteredEmployees = useMemo(() => {
     if (!data) return [];
 
-    return data.employees.filter((employee: EmployeeAvailability) => {
+    return employeesWithAssignmentTimeline.filter((employee: EmployeeAvailability) => {
       if (
         searchTerm.trim() &&
         !employee.name.toLowerCase().includes(searchTerm.trim().toLowerCase())
@@ -125,7 +217,7 @@ export function usePlanningData() {
       }
       return !departmentName || employee.department_name === departmentName;
     });
-  }, [data, searchTerm, hideFullyAssigned, departmentName]);
+  }, [employeesWithAssignmentTimeline, searchTerm, hideFullyAssigned, departmentName]);
 
   const departmentNames = useMemo(() => {
     if (!data) return [];
@@ -149,6 +241,7 @@ export function usePlanningData() {
 
   return {
     availabilityQuery,
+    isAssignmentTimelineLoading: employeeDetailsQuery.isLoading,
     departments: departmentsQuery.data ?? [],
     weeksToShow,
     setWeeksToShow,
