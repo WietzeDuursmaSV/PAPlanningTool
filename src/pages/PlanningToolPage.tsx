@@ -7,7 +7,7 @@ import { usePlanningData } from '../hooks/usePlanningData';
 
 const useStyles = makeStyles({
   container: {
-    maxWidth: '1400px',
+    maxWidth: '80vw',
     display: 'grid',
     gridTemplateColumns: '260px minmax(0, 1fr)',
     alignItems: 'start',

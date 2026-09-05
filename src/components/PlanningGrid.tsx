@@ -7,6 +7,19 @@ type PlanningGridProps = {
   onEmployeeSelect: (employeeId: number) => void;
 };
 
+function getIsoWeekLabel(monday: string, fallbackWeek: number): string {
+  const date = new Date(`${monday}T00:00:00Z`);
+  if (Number.isNaN(date.valueOf())) return `W${fallbackWeek}`;
+
+  date.setUTCDate(date.getUTCDate() + 3);
+  const firstThursday = new Date(Date.UTC(date.getUTCFullYear(), 0, 4));
+  const firstThursdayDay = (firstThursday.getUTCDay() + 6) % 7;
+  firstThursday.setUTCDate(firstThursday.getUTCDate() - firstThursdayDay + 3);
+  const weekNumber = 1 + Math.round((date.valueOf() - firstThursday.valueOf()) / 604800000);
+
+  return `W${weekNumber}`;
+}
+
 const useStyles = makeStyles({
   wrapper: {
     width: '100%',
@@ -100,7 +113,7 @@ export default function PlanningGrid({ employees, onEmployeeSelect }: PlanningGr
           </div>
           {weeks.map((week) => (
             <div className={styles.headerCell} key={week.week_nr} role="columnheader">
-              W{week.week_nr}
+              {getIsoWeekLabel(week.monday, week.week_nr)}
             </div>
           ))}
         </div>
