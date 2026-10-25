@@ -17,6 +17,14 @@
         "office365users"
       ],
       "dataSets": {}
+    },
+    "f52e3e21-4f28-4265-84cd-23276c53e7bd": {
+      "id": "/providers/Microsoft.PowerApps/apis/shared_new-5fplanning-20api-5f0628507f9c75fd40",
+      "displayName": "Planning API",
+      "dataSources": [
+        "new_5fplanning_20api_5f0628507f9c75fd40"
+      ],
+      "dataSets": {}
     }
   },
   "databaseReferences": {}

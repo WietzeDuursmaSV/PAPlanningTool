@@ -5,6 +5,136 @@
  */
 
 export const dataSourcesInfo = {
+  "new_5fplanning_20api_5f0628507f9c75fd40": {
+    "tableId": "",
+    "version": "",
+    "primaryKey": "",
+    "dataSourceType": "Connector",
+    "apis": {
+      "GetAvailability": {
+        "path": "/{connectionId}/availability",
+        "method": "GET",
+        "parameters": [
+          {
+            "name": "connectionId",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "week",
+            "in": "query",
+            "required": false,
+            "type": "integer"
+          },
+          {
+            "name": "year",
+            "in": "query",
+            "required": false,
+            "type": "integer"
+          },
+          {
+            "name": "weeks",
+            "in": "query",
+            "required": false,
+            "type": "integer"
+          },
+          {
+            "name": "department",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          }
+        ],
+        "responseInfo": {
+          "200": {
+            "type": "object"
+          }
+        }
+      },
+      "GetEmployeeAvailability": {
+        "path": "/{connectionId}/availability/{employee_id}",
+        "method": "GET",
+        "parameters": [
+          {
+            "name": "connectionId",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "employee_id",
+            "in": "path",
+            "required": true,
+            "type": "integer"
+          },
+          {
+            "name": "week",
+            "in": "query",
+            "required": false,
+            "type": "integer"
+          },
+          {
+            "name": "year",
+            "in": "query",
+            "required": false,
+            "type": "integer"
+          },
+          {
+            "name": "weeks",
+            "in": "query",
+            "required": false,
+            "type": "integer"
+          }
+        ],
+        "responseInfo": {
+          "200": {
+            "type": "object"
+          }
+        }
+      },
+      "GetEmployeeDetails": {
+        "path": "/{connectionId}/employees/{employee_id}",
+        "method": "GET",
+        "parameters": [
+          {
+            "name": "connectionId",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "employee_id",
+            "in": "path",
+            "required": true,
+            "type": "integer"
+          }
+        ],
+        "responseInfo": {
+          "200": {
+            "type": "object"
+          }
+        }
+      },
+      "GetDepartments": {
+        "path": "/{connectionId}/departments",
+        "method": "GET",
+        "parameters": [
+          {
+            "name": "connectionId",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "responseInfo": {
+          "200": {
+            "type": "array"
+          }
+        }
+      }
+    }
+  },
   "office365users": {
     "tableId": "",
     "version": "",

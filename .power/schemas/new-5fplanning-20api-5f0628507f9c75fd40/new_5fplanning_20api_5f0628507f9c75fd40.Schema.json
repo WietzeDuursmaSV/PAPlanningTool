@@ -1,0 +1,555 @@
+{
+  "name": "shared_new-5fplanning-20api-5f0628507f9c75fd40",
+  "id": "/providers/Microsoft.PowerApps/apis/shared_new-5fplanning-20api-5f0628507f9c75fd40",
+  "type": "Microsoft.PowerApps/apis",
+  "properties": {
+    "xrmConnectorId": "ff392b9e-3141-4b11-b1df-0c1b650a7b25",
+    "displayName": "Planning API",
+    "iconUri": "https://defaulticons.powerapps.com/defaulticons/api-dedicated.png",
+    "iconBrandColor": "#007ee5",
+    "contact": {},
+    "license": {},
+    "apiEnvironment": "Shared",
+    "isCustomApi": true,
+    "blobUrisAreProxied": false,
+    "connectionParameters": {
+      "api_key": {
+        "type": "securestring",
+        "uiDefinition": {
+          "displayName": "API Key",
+          "description": "API Key voor deze API",
+          "tooltip": "Geef uw API Key op",
+          "constraints": {
+            "tabIndex": 2,
+            "clearText": false,
+            "required": "true"
+          }
+        }
+      }
+    },
+    "swagger": {
+      "swagger": "2.0",
+      "info": {
+        "title": "Planning API",
+        "description": "ClockWise Planning API connector.",
+        "version": "1.0"
+      },
+      "host": "87f264fa239ceee5a7f658a7e77c43.53.environment.api.powerplatform.com",
+      "basePath": "/connectors/runtime/invoke/scalegroups/europe002/shards/06/apis/new-5fplanning-20api-5f0628507f9c75fd40/connections/",
+      "schemes": [
+        "https",
+        "http"
+      ],
+      "consumes": [],
+      "produces": [
+        "application/json"
+      ],
+      "paths": {
+        "/{connectionId}/availability": {
+          "get": {
+            "summary": "Beschikbaarheid ophalen",
+            "description": "Haalt de beschikbaarheid op uit de Planning API.",
+            "operationId": "GetAvailability",
+            "parameters": [
+              {
+                "name": "connectionId",
+                "in": "path",
+                "required": true,
+                "x-ms-visibility": "internal",
+                "type": "string"
+              },
+              {
+                "$ref": "#/parameters/week"
+              },
+              {
+                "$ref": "#/parameters/year"
+              },
+              {
+                "$ref": "#/parameters/weeks"
+              },
+              {
+                "$ref": "#/parameters/department"
+              }
+            ],
+            "responses": {
+              "200": {
+                "description": "Availability grid",
+                "schema": {
+                  "$ref": "#/definitions/AvailabilityResponse"
+                }
+              }
+            }
+          }
+        },
+        "/{connectionId}/availability/{employee_id}": {
+          "get": {
+            "summary": "Beschikbaarheid medewerker ophalen",
+            "operationId": "GetEmployeeAvailability",
+            "parameters": [
+              {
+                "name": "connectionId",
+                "in": "path",
+                "required": true,
+                "x-ms-visibility": "internal",
+                "type": "string"
+              },
+              {
+                "name": "employee_id",
+                "in": "path",
+                "required": true,
+                "type": "integer",
+                "format": "int32"
+              },
+              {
+                "$ref": "#/parameters/week"
+              },
+              {
+                "$ref": "#/parameters/year"
+              },
+              {
+                "$ref": "#/parameters/weeks"
+              }
+            ],
+            "responses": {
+              "200": {
+                "description": "Employee availability",
+                "schema": {
+                  "$ref": "#/definitions/EmployeeAvailability"
+                }
+              }
+            }
+          }
+        },
+        "/{connectionId}/employees/{employee_id}": {
+          "get": {
+            "summary": "Medewerkerdetails ophalen",
+            "operationId": "GetEmployeeDetails",
+            "parameters": [
+              {
+                "name": "connectionId",
+                "in": "path",
+                "required": true,
+                "x-ms-visibility": "internal",
+                "type": "string"
+              },
+              {
+                "name": "employee_id",
+                "in": "path",
+                "required": true,
+                "type": "integer",
+                "format": "int32"
+              }
+            ],
+            "responses": {
+              "200": {
+                "description": "Employee details",
+                "schema": {
+                  "$ref": "#/definitions/Employee"
+                }
+              }
+            }
+          }
+        },
+        "/{connectionId}/departments": {
+          "get": {
+            "summary": "Afdelingen ophalen",
+            "operationId": "GetDepartments",
+            "responses": {
+              "200": {
+                "description": "Department categories",
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                }
+              }
+            },
+            "parameters": [
+              {
+                "name": "connectionId",
+                "in": "path",
+                "required": true,
+                "x-ms-visibility": "internal",
+                "type": "string"
+              }
+            ]
+          }
+        }
+      },
+      "parameters": {
+        "week": {
+          "name": "week",
+          "in": "query",
+          "required": false,
+          "type": "integer",
+          "format": "int32"
+        },
+        "year": {
+          "name": "year",
+          "in": "query",
+          "required": false,
+          "type": "integer",
+          "format": "int32"
+        },
+        "weeks": {
+          "name": "weeks",
+          "in": "query",
+          "required": false,
+          "type": "integer",
+          "format": "int32"
+        },
+        "department": {
+          "name": "department",
+          "in": "query",
+          "required": false,
+          "type": "string"
+        }
+      },
+      "definitions": {
+        "AvailabilityResponse": {
+          "type": "object",
+          "required": [
+            "week_start",
+            "year",
+            "num_weeks",
+            "generated_at",
+            "employees"
+          ],
+          "properties": {
+            "week_start": {
+              "type": "integer",
+              "format": "int32"
+            },
+            "year": {
+              "type": "integer",
+              "format": "int32"
+            },
+            "num_weeks": {
+              "type": "integer",
+              "format": "int32"
+            },
+            "generated_at": {
+              "type": "string",
+              "format": "date-time"
+            },
+            "employees": {
+              "type": "array",
+              "items": {
+                "$ref": "#/definitions/EmployeeAvailability"
+              }
+            }
+          }
+        },
+        "EmployeeAvailability": {
+          "type": "object",
+          "required": [
+            "id",
+            "name",
+            "contract_type",
+            "hours_per_week",
+            "status",
+            "weeks"
+          ],
+          "properties": {
+            "id": {
+              "type": "integer",
+              "format": "int32"
+            },
+            "name": {
+              "type": "string"
+            },
+            "department_category": {
+              "type": "string",
+              "x-nullable": true
+            },
+            "department_name": {
+              "type": "string",
+              "x-nullable": true
+            },
+            "contract_type": {
+              "type": "string"
+            },
+            "hours_per_week": {
+              "type": "number",
+              "format": "double"
+            },
+            "status": {
+              "type": "string"
+            },
+            "weeks": {
+              "type": "array",
+              "items": {
+                "$ref": "#/definitions/WeekAvailability"
+              }
+            }
+          }
+        },
+        "WeekAvailability": {
+          "type": "object",
+          "required": [
+            "week_nr",
+            "monday",
+            "total_hours",
+            "is_fully_assigned",
+            "week_uren"
+          ],
+          "properties": {
+            "week_nr": {
+              "type": "integer",
+              "format": "int32"
+            },
+            "monday": {
+              "type": "string",
+              "format": "date"
+            },
+            "total_hours": {
+              "type": "integer",
+              "format": "int32"
+            },
+            "is_fully_assigned": {
+              "type": "boolean"
+            },
+            "week_uren": {
+              "type": "array",
+              "items": {
+                "$ref": "#/definitions/WeekUren"
+              }
+            }
+          }
+        },
+        "WeekUren": {
+          "type": "object",
+          "required": [
+            "type",
+            "hours"
+          ],
+          "properties": {
+            "type": {
+              "type": "string"
+            },
+            "hours": {
+              "type": "integer",
+              "format": "int32"
+            },
+            "project_id": {
+              "type": "integer",
+              "format": "int32",
+              "x-nullable": true
+            },
+            "project_code": {
+              "type": "string",
+              "x-nullable": true
+            },
+            "project_name": {
+              "type": "string",
+              "x-nullable": true
+            }
+          }
+        },
+        "Employee": {
+          "type": "object",
+          "required": [
+            "internal_id",
+            "name"
+          ],
+          "properties": {
+            "internal_id": {
+              "type": "integer",
+              "format": "int32"
+            },
+            "name": {
+              "type": "string"
+            },
+            "login": {
+              "type": "string",
+              "x-nullable": true
+            },
+            "function": {
+              "type": "string",
+              "x-nullable": true
+            },
+            "start_date": {
+              "type": "string",
+              "x-nullable": true
+            },
+            "end_date": {
+              "type": "string",
+              "x-nullable": true
+            },
+            "hours_per_week": {
+              "type": "number",
+              "format": "double"
+            },
+            "contract_type": {
+              "type": "string"
+            },
+            "status": {
+              "type": "string"
+            },
+            "department_id": {
+              "type": "integer",
+              "format": "int32",
+              "x-nullable": true
+            },
+            "assignments": {
+              "type": "array",
+              "items": {
+                "$ref": "#/definitions/Assignment"
+              }
+            }
+          }
+        },
+        "Assignment": {
+          "type": "object",
+          "properties": {
+            "internal_id": {
+              "type": "integer",
+              "format": "int32"
+            },
+            "project_id": {
+              "type": "integer",
+              "format": "int32",
+              "x-nullable": true
+            },
+            "employee_id": {
+              "type": "integer",
+              "format": "int32",
+              "x-nullable": true
+            },
+            "status": {
+              "type": "string",
+              "x-nullable": true
+            },
+            "start_date": {
+              "type": "string",
+              "x-nullable": true
+            },
+            "end_date": {
+              "type": "string",
+              "x-nullable": true
+            },
+            "hours_per_week": {
+              "type": "integer",
+              "format": "int32"
+            },
+            "project": {
+              "$ref": "#/definitions/Project",
+              "x-nullable": true
+            }
+          }
+        },
+        "Project": {
+          "type": "object",
+          "properties": {
+            "internal_id": {
+              "type": "integer",
+              "format": "int32"
+            },
+            "name": {
+              "type": "string"
+            },
+            "code": {
+              "type": "string",
+              "x-nullable": true
+            },
+            "status": {
+              "type": "string"
+            },
+            "customer": {
+              "$ref": "#/definitions/Customer",
+              "x-nullable": true
+            }
+          }
+        },
+        "Customer": {
+          "type": "object",
+          "properties": {
+            "internal_id": {
+              "type": "integer",
+              "format": "int32"
+            },
+            "name": {
+              "type": "string"
+            }
+          }
+        }
+      },
+      "securityDefinitions": {
+        "api_key": {
+          "type": "apiKey",
+          "in": "header",
+          "name": "X-API-Key"
+        }
+      },
+      "security": [
+        {
+          "api_key": []
+        }
+      ]
+    },
+    "runtimeUrls": [
+      "https://87f264fa239ceee5a7f658a7e77c43.53.environment.api.powerplatform.com/connectors/runtime/invoke/scalegroups/europe002/shards/06/apis/new-5fplanning-20api-5f0628507f9c75fd40/connections/"
+    ],
+    "primaryRuntimeUrl": "https://87f264fa239ceee5a7f658a7e77c43.53.environment.api.powerplatform.com/connectors/runtime/invoke/scalegroups/europe002/shards/06/apis/new-5fplanning-20api-5f0628507f9c75fd40/connections/",
+    "doNotUseApiHubNetRuntimeUrl": "https://87f264fa-239c-eee5-a7f6-58a7e77c4353.06.custom.europe002.azure-apihub.net/apim/new-5fplanning-20api-5f0628507f9c75fd40",
+    "metadata": {
+      "source": "powerapps-user-defined",
+      "brandColor": "#007ee5",
+      "contact": {},
+      "license": {},
+      "publisherUrl": null,
+      "serviceUrl": null,
+      "documentationUrl": null,
+      "environmentName": "87f264fa-239c-eee5-a7f6-58a7e77c4353",
+      "xrmConnectorId": "ff392b9e-3141-4b11-b1df-0c1b650a7b25",
+      "almMode": "Solution",
+      "parameters": {},
+      "useNewApimVersion": "True",
+      "createdBy": "{\"id\":\"6bec23d0-eb40-4ca1-88b1-02b1f371afdf\",\"displayName\":\"Wietze Duursma\",\"email\":\"w.duursma@sharevalue.nl\",\"type\":\"User\",\"userType\":\"NotSpecified\",\"tenantId\":\"324e126c-dfce-4ae1-921e-ddea964b4a68\",\"userPrincipalName\":\"w.duursma@sharevalue.nl\"}",
+      "modifiedBy": "{\"id\":\"6bec23d0-eb40-4ca1-88b1-02b1f371afdf\",\"displayName\":\"Wietze Duursma\",\"email\":\"w.duursma@sharevalue.nl\",\"type\":\"User\",\"userType\":\"NotSpecified\",\"tenantId\":\"324e126c-dfce-4ae1-921e-ddea964b4a68\",\"userPrincipalName\":\"w.duursma@sharevalue.nl\"}",
+      "allowSharing": false,
+      "rateLimit": 0
+    },
+    "capabilities": [],
+    "description": "ClockWise Planning API connector.",
+    "apiDefinitions": {
+      "originalSwaggerUrl": "https://eur002002neuext.blob.core.windows.net/api-swagger-files/europe-002/new-5fplanning-20api-5f0628507f9c75fd40.json_original?skoid=a18ce847-5bbf-4179-b6dd-1aa1cb321bd0&sktid=33e01921-4d64-4f8c-a055-5bdaffd5e33d&skt=2026-10-24T23%3A48%3A49Z&ske=2026-10-25T23%3A48%3A49Z&sks=b&skv=2025-01-05&sv=2025-01-05&spr=https&se=2026-10-25T13%3A20%3A37Z&sr=b&sp=r&sig=BuHSf263oO7vLqWVGoQM8Qripa7oyrK2vR9PUVIDSxs%3D",
+      "modifiedSwaggerUrl": "https://eur002002neuext.blob.core.windows.net/api-swagger-files/europe-002/new-5fplanning-20api-5f0628507f9c75fd40.json?skoid=a18ce847-5bbf-4179-b6dd-1aa1cb321bd0&sktid=33e01921-4d64-4f8c-a055-5bdaffd5e33d&skt=2026-10-24T23%3A48%3A49Z&ske=2026-10-25T23%3A48%3A49Z&sks=b&skv=2025-01-05&sv=2025-01-05&spr=https&se=2026-10-25T13%3A20%3A37Z&sr=b&sp=r&sig=dm81vNl1NtMT2%2BjodmxhJnsMEvT0O7D29g9LPEC2ewU%3D"
+    },
+    "policyTemplateInstances": [],
+    "backendService": {
+      "serviceUrl": "https://planning-api.sharevalue.nl/"
+    },
+    "createdBy": {
+      "id": "6bec23d0-eb40-4ca1-88b1-02b1f371afdf",
+      "displayName": "Wietze Duursma",
+      "email": "w.duursma@sharevalue.nl",
+      "type": "User",
+      "userType": "NotSpecified",
+      "tenantId": "324e126c-dfce-4ae1-921e-ddea964b4a68",
+      "userPrincipalName": "w.duursma@sharevalue.nl"
+    },
+    "modifiedBy": {
+      "id": "6bec23d0-eb40-4ca1-88b1-02b1f371afdf",
+      "displayName": "Wietze Duursma",
+      "email": "w.duursma@sharevalue.nl",
+      "type": "User",
+      "userType": "NotSpecified",
+      "tenantId": "324e126c-dfce-4ae1-921e-ddea964b4a68",
+      "userPrincipalName": "w.duursma@sharevalue.nl"
+    },
+    "createdTime": "2026-10-25T11:04:36.0730547Z",
+    "changedTime": "2026-10-25T12:06:43.3684807Z",
+    "environment": {
+      "id": "/providers/Microsoft.PowerApps/environments/87f264fa-239c-eee5-a7f6-58a7e77c4353",
+      "name": "87f264fa-239c-eee5-a7f6-58a7e77c4353"
+    },
+    "tier": "Standard",
+    "publisher": "Wietze Duursma",
+    "almMode": "Solution",
+    "parameters": {},
+    "rateLimit": 0,
+    "apiVersion": "None"
+  }
+}

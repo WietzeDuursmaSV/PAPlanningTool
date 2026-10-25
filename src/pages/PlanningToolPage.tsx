@@ -57,6 +57,7 @@ export default function PlanningToolPage() {
     departmentNames,
     handleWeekShift,
     employeeDetailQuery,
+    selectedEmployeeDetails,
     office365ProfileQuery,
   } = usePlanningData();
 
@@ -114,6 +115,7 @@ export default function PlanningToolPage() {
           employeeName={selectedEmployee?.name}
           isInternal={isSelectedEmployeeInternal}
           employeeDetails={employeeDetailQuery.data}
+          selectedEmployeeDetails={selectedEmployeeDetails}
           isEmployeeDetailsLoading={employeeDetailQuery.isLoading}
           office365Profile={office365ProfileQuery.data?.profile}
           office365Photo={office365ProfileQuery.data?.photo}

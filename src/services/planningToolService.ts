@@ -1,15 +1,4 @@
-/**
- * Client for the local ClockWise Planning Tool API (see /Users/wietduur/Documents/DEV/planning-tool).
- *
- * NOTE: This currently talks directly to the FastAPI server via fetch (CORS is open on the API).
- * Once a Power Platform custom connector is registered for this API, this file can be swapped
- * for a generated `src/generated/services/PlanningToolService.ts` client without changing the
- * page code, as long as the exported function signatures below stay the same.
- */
-
-// Configurable via VITE_PLANNING_API_BASE_URL, defaults to the local dev server.
-const BASE_URL =
-  (import.meta.env.VITE_PLANNING_API_BASE_URL as string | undefined) ?? 'http://localhost:8000';
+import { PlanningAPIService } from '../generated';
 
 export type Uursoort = 'feestdag' | 'reservering' | 'inzet' | 'beschikbaar';
 
@@ -53,6 +42,11 @@ export interface EmployeeAssignment {
     internal_id: number;
     name: string;
     code?: string | null;
+    status: string;
+    customer: {
+      internal_id: number;
+      name: string;
+    };
   };
 }
 
@@ -87,39 +81,20 @@ export interface GetAvailabilityParams {
   department?: string;
 }
 
-async function getJson<T>(
-  path: string,
-  params?: Record<string, string | number | undefined>,
-): Promise<T> {
-  const url = new URL(path, BASE_URL);
-  if (params) {
-    for (const [key, value] of Object.entries(params)) {
-      if (value !== undefined && value !== '') {
-        url.searchParams.set(key, String(value));
-      }
-    }
-  }
-
-  const response = await fetch(url.toString());
-  if (!response.ok) {
-    throw new Error(`Planning tool API request failed (${response.status}): ${path}`);
-  }
-  const json = (await response.json()) as T;
-  console.log(`[PlanningToolService] ${url.toString()} ->`, json);
-  return json;
-}
-
 export const PlanningToolService = {
   async getAvailability(params: GetAvailabilityParams = {}): Promise<AvailabilityResponse> {
     try {
-      return await getJson<AvailabilityResponse>('/availability', {
-        week: params.week,
-        year: params.year,
-        weeks: params.weeks,
-        department: params.department,
-      });
+      const result = await PlanningAPIService.GetAvailability(
+        params.week,
+        params.year,
+        params.weeks,
+        params.department,
+      );
+      if (!result.success || !result.data) {
+        throw result.error ?? new Error('Planning API beschikbaarheid kon niet worden geladen.');
+      }
+      return { ...(result.data as unknown as AvailabilityResponse), source: 'live' };
     } catch {
-      // API not reachable (e.g. running inside Power Apps without access to localhost) — show mock data instead.
       const { buildMockAvailability } = await import('./mockPlanningData');
       return { ...buildMockAvailability(params), source: 'mock' };
     }
@@ -130,11 +105,19 @@ export const PlanningToolService = {
     params: Omit<GetAvailabilityParams, 'department'> = {},
   ): Promise<EmployeeAvailability> {
     try {
-      return await getJson<EmployeeAvailability>(`/availability/${employeeId}`, {
-        week: params.week,
-        year: params.year,
-        weeks: params.weeks,
-      });
+      const result = await PlanningAPIService.GetEmployeeAvailability(
+        employeeId,
+        params.week,
+        params.year,
+        params.weeks,
+      );
+      if (!result.success || !result.data) {
+        throw (
+          result.error ??
+          new Error('Planning API medewerkerbeschikbaarheid kon niet worden geladen.')
+        );
+      }
+      return result.data as unknown as EmployeeAvailability;
     } catch {
       const { buildMockEmployeeAvailability } = await import('./mockPlanningData');
       return buildMockEmployeeAvailability(employeeId, params);
@@ -142,12 +125,24 @@ export const PlanningToolService = {
   },
 
   async getEmployeeDetails(employeeId: number): Promise<EmployeeDetails> {
-    return getJson<EmployeeDetails>(`/employees/${employeeId}`);
+    const result = await PlanningAPIService.GetEmployeeDetails(employeeId);
+    if (!result.success || !result.data) {
+      throw result.error ?? new Error('Planning API medewerkerdetails konden niet worden geladen.');
+    }
+    return result.data as unknown as EmployeeDetails;
   },
 
   async getDepartments(): Promise<string[]> {
     try {
-      return await getJson<string[]>('/departments');
+      const result = await PlanningAPIService.GetDepartments();
+      if (
+        !result.success ||
+        !Array.isArray(result.data) ||
+        !result.data.every((department): department is string => typeof department === 'string')
+      ) {
+        throw result.error ?? new Error('Planning API afdelingen konden niet worden geladen.');
+      }
+      return result.data;
     } catch {
       const { getMockDepartments } = await import('./mockPlanningData');
       return getMockDepartments();

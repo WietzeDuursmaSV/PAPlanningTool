@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { useQuery } from '@tanstack/react-query';
+import { useQueries, useQuery } from '@tanstack/react-query';
 import { Office365UsersService } from '../generated';
 import {
   PlanningToolService,
@@ -121,28 +121,39 @@ export function usePlanningData() {
   });
 
   const data = availabilityQuery.data;
-  const employeeDetailsQuery = useQuery({
-    queryKey: ['planning-tool', 'employee-details', data?.employees.map((employee) => employee.id)],
-    queryFn: async () => {
-      if (!data) return new Map<number, EmployeeDetails>();
-
-      const results = await Promise.allSettled(
-        data.employees.map(async (employee) => ({
-          employeeId: employee.id,
-          details: await PlanningToolService.getEmployeeDetails(employee.id),
-        })),
-      );
-
-      return new Map(
-        results.flatMap((result) =>
-          result.status === 'fulfilled'
-            ? [[result.value.employeeId, result.value.details] as const]
-            : [],
+  const normalizedSearchTerm = searchTerm.trim().toLowerCase();
+  const employeesForDetails =
+    (departmentName || normalizedSearchTerm) && data && data.source !== 'mock'
+      ? data.employees.filter(
+          (employee) =>
+            (!departmentName || employee.department_name === departmentName) &&
+            (!normalizedSearchTerm || employee.name.toLowerCase().includes(normalizedSearchTerm)),
+        )
+      : [];
+  const employeeDetailsQuery = useQueries({
+    queries: employeesForDetails.map((employee) => ({
+      queryKey: ['planning-tool', 'employee-details', employee.id],
+      queryFn: () => PlanningToolService.getEmployeeDetails(employee.id),
+      staleTime: 4 * 60 * 60 * 1000,
+      gcTime: 4 * 60 * 60 * 1000,
+    })),
+    combine: (results) => ({
+      data: new Map<number, EmployeeDetails>(
+        results.flatMap((result, index) =>
+          result.data ? [[employeesForDetails[index].id, result.data] as const] : [],
         ),
-      );
-    },
-    enabled: !!data && data.source !== 'mock',
+      ),
+      isLoading: results.some((result) => result.isLoading),
+    }),
   });
+
+  const selectedEmployeeDetails = useMemo(() => {
+    if (selectedEmployeeId === null || !employeeDetailsQuery.data) {
+      return undefined;
+    }
+
+    return employeeDetailsQuery.data.get(selectedEmployeeId);
+  }, [selectedEmployeeId, employeeDetailsQuery.data]);
 
   const employeesWithAssignmentTimeline = useMemo(() => {
     if (!data || !employeeDetailsQuery.data) return data?.employees ?? [];
@@ -261,6 +272,8 @@ export function usePlanningData() {
     departmentNames,
     handleWeekShift,
     employeeDetailQuery,
+    employeeDetailsQuery,
+    selectedEmployeeDetails,
     office365ProfileQuery,
   };
 }

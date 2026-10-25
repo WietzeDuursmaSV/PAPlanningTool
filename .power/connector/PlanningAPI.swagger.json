@@ -1,0 +1,240 @@
+{
+  "swagger": "2.0",
+  "info": {
+    "title": "Planning API",
+    "description": "ClockWise Planning API connector.",
+    "version": "1.0"
+  },
+  "host": "planning-api.sharevalue.nl",
+  "basePath": "/",
+  "schemes": ["https"],
+  "consumes": [],
+  "produces": ["application/json"],
+  "paths": {
+    "/availability": {
+      "get": {
+        "summary": "Beschikbaarheid ophalen",
+        "description": "Haalt de beschikbaarheid op uit de Planning API.",
+        "operationId": "GetAvailability",
+        "parameters": [
+          { "$ref": "#/parameters/week" },
+          { "$ref": "#/parameters/year" },
+          { "$ref": "#/parameters/weeks" },
+          { "$ref": "#/parameters/department" }
+        ],
+        "responses": {
+          "200": {
+            "description": "Availability grid",
+            "schema": { "$ref": "#/definitions/AvailabilityResponse" }
+          }
+        }
+      }
+    },
+    "/availability/{employee_id}": {
+      "get": {
+        "summary": "Beschikbaarheid medewerker ophalen",
+        "operationId": "GetEmployeeAvailability",
+        "parameters": [
+          {
+            "name": "employee_id",
+            "in": "path",
+            "required": true,
+            "type": "integer",
+            "format": "int32"
+          },
+          { "$ref": "#/parameters/week" },
+          { "$ref": "#/parameters/year" },
+          { "$ref": "#/parameters/weeks" }
+        ],
+        "responses": {
+          "200": {
+            "description": "Employee availability",
+            "schema": { "$ref": "#/definitions/EmployeeAvailability" }
+          }
+        }
+      }
+    },
+    "/employees/{employee_id}": {
+      "get": {
+        "summary": "Medewerkerdetails ophalen",
+        "operationId": "GetEmployeeDetails",
+        "parameters": [
+          {
+            "name": "employee_id",
+            "in": "path",
+            "required": true,
+            "type": "integer",
+            "format": "int32"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Employee details",
+            "schema": { "$ref": "#/definitions/Employee" }
+          }
+        }
+      }
+    },
+    "/departments": {
+      "get": {
+        "summary": "Afdelingen ophalen",
+        "operationId": "GetDepartments",
+        "responses": {
+          "200": {
+            "description": "Department categories",
+            "schema": {
+              "type": "array",
+              "items": { "type": "string" }
+            }
+          }
+        }
+      }
+    }
+  },
+  "parameters": {
+    "week": {
+      "name": "week",
+      "in": "query",
+      "required": false,
+      "type": "integer",
+      "format": "int32"
+    },
+    "year": {
+      "name": "year",
+      "in": "query",
+      "required": false,
+      "type": "integer",
+      "format": "int32"
+    },
+    "weeks": {
+      "name": "weeks",
+      "in": "query",
+      "required": false,
+      "type": "integer",
+      "format": "int32"
+    },
+    "department": {
+      "name": "department",
+      "in": "query",
+      "required": false,
+      "type": "string"
+    }
+  },
+  "definitions": {
+    "AvailabilityResponse": {
+      "type": "object",
+      "required": ["week_start", "year", "num_weeks", "generated_at", "employees"],
+      "properties": {
+        "week_start": { "type": "integer", "format": "int32" },
+        "year": { "type": "integer", "format": "int32" },
+        "num_weeks": { "type": "integer", "format": "int32" },
+        "generated_at": { "type": "string", "format": "date-time" },
+        "employees": {
+          "type": "array",
+          "items": { "$ref": "#/definitions/EmployeeAvailability" }
+        }
+      }
+    },
+    "EmployeeAvailability": {
+      "type": "object",
+      "required": ["id", "name", "contract_type", "hours_per_week", "status", "weeks"],
+      "properties": {
+        "id": { "type": "integer", "format": "int32" },
+        "name": { "type": "string" },
+        "department_category": { "type": "string", "x-nullable": true },
+        "department_name": { "type": "string", "x-nullable": true },
+        "contract_type": { "type": "string" },
+        "hours_per_week": { "type": "number", "format": "double" },
+        "status": { "type": "string" },
+        "weeks": {
+          "type": "array",
+          "items": { "$ref": "#/definitions/WeekAvailability" }
+        }
+      }
+    },
+    "WeekAvailability": {
+      "type": "object",
+      "required": ["week_nr", "monday", "total_hours", "is_fully_assigned", "week_uren"],
+      "properties": {
+        "week_nr": { "type": "integer", "format": "int32" },
+        "monday": { "type": "string", "format": "date" },
+        "total_hours": { "type": "integer", "format": "int32" },
+        "is_fully_assigned": { "type": "boolean" },
+        "week_uren": {
+          "type": "array",
+          "items": { "$ref": "#/definitions/WeekUren" }
+        }
+      }
+    },
+    "WeekUren": {
+      "type": "object",
+      "required": ["type", "hours"],
+      "properties": {
+        "type": { "type": "string" },
+        "hours": { "type": "integer", "format": "int32" },
+        "project_id": { "type": "integer", "format": "int32", "x-nullable": true },
+        "project_code": { "type": "string", "x-nullable": true },
+        "project_name": { "type": "string", "x-nullable": true }
+      }
+    },
+    "Employee": {
+      "type": "object",
+      "required": ["internal_id", "name"],
+      "properties": {
+        "internal_id": { "type": "integer", "format": "int32" },
+        "name": { "type": "string" },
+        "login": { "type": "string", "x-nullable": true },
+        "function": { "type": "string", "x-nullable": true },
+        "start_date": { "type": "string", "format": "date", "x-nullable": true },
+        "end_date": { "type": "string", "format": "date", "x-nullable": true },
+        "hours_per_week": { "type": "number", "format": "double" },
+        "contract_type": { "type": "string" },
+        "status": { "type": "string" },
+        "department_id": { "type": "integer", "format": "int32", "x-nullable": true },
+        "assignments": {
+          "type": "array",
+          "items": { "$ref": "#/definitions/Assignment" }
+        }
+      }
+    },
+    "Assignment": {
+      "type": "object",
+      "properties": {
+        "internal_id": { "type": "integer", "format": "int32" },
+        "project_id": { "type": "integer", "format": "int32", "x-nullable": true },
+        "employee_id": { "type": "integer", "format": "int32", "x-nullable": true },
+        "status": { "type": "string", "x-nullable": true },
+        "start_date": { "type": "string", "format": "date", "x-nullable": true },
+        "end_date": { "type": "string", "format": "date", "x-nullable": true },
+        "hours_budget": { "type": "integer", "format": "int32", "x-nullable": true },
+        "hours_per_week": { "type": "integer", "format": "int32" },
+        "project": { "$ref": "#/definitions/Project", "x-nullable": true }
+      }
+    },
+    "Project": {
+      "type": "object",
+      "properties": {
+        "internal_id": { "type": "integer", "format": "int32" },
+        "name": { "type": "string" },
+        "code": { "type": "string", "x-nullable": true },
+        "status": { "type": "string" },
+        "customer": { "$ref": "#/definitions/Customer", "x-nullable": true }
+      }
+    },
+    "Customer": {
+      "type": "object",
+      "properties": {
+        "internal_id": { "type": "integer", "format": "int32" },
+        "name": { "type": "string" }
+      }
+    }
+  },
+  "securityDefinitions": {
+    "api_key": {
+      "type": "apiKey",
+      "in": "header",
+      "name": "X-API-Key"
+    }
+  },
+  "security": [{ "api_key": [] }]
+}

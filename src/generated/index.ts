@@ -5,6 +5,8 @@
 
 // Models
 export * as Office365UsersModel from './models/Office365UsersModel';
+export * as PlanningAPIModel from './models/PlanningAPIModel';
 
 // Services
 export * from './services/Office365UsersService';
+export * from './services/PlanningAPIService';

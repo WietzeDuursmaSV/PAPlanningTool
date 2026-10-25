@@ -15,13 +15,14 @@ import {
   tokens,
 } from '@fluentui/react-components';
 import type { GraphUser_V1 } from '../generated/models/Office365UsersModel';
-import type { EmployeeAvailability, Uursoort } from '../services/planningToolService';
+import type { EmployeeAvailability, EmployeeDetails } from '../services/planningToolService';
 
 type PlanningDetailsProps = {
   open: boolean;
   employeeName?: string;
   isInternal: boolean;
   employeeDetails?: EmployeeAvailability;
+  selectedEmployeeDetails?: EmployeeDetails;
   isEmployeeDetailsLoading: boolean;
   office365Profile?: GraphUser_V1;
   office365Photo?: string;
@@ -38,16 +39,21 @@ const useStyles = makeStyles({
   },
   dialogContent: {
     display: 'grid',
-    gridTemplateColumns: 'minmax(180px, 240px) minmax(0, 1fr)',
+    // gridTemplateColumns: 'minmax(180px, 240px) minmax(0, 1fr)',
     ...shorthands.gap('24px'),
     '@media (max-width: 700px)': {
       gridTemplateColumns: '1fr',
     },
   },
-  profilePanel: {
+  dialogAsideContent: {
     display: 'flex',
     flexDirection: 'column',
-    ...shorthands.gap('8px'),
+    ...shorthands.gap('4px'),
+  },
+  profilePanel: {
+    display: 'flex',
+    flexDirection: 'row',
+    ...shorthands.gap('32px'),
   },
   profilePhoto: {
     width: '96px',
@@ -57,12 +63,15 @@ const useStyles = makeStyles({
   },
   profileSkeleton: {
     display: 'flex',
-    flexDirection: 'column',
-    ...shorthands.gap('12px'),
+    flexDirection: 'row',
+    alignItems: 'center',
+    width: '300px',
+    ...shorthands.gap('32px'),
   },
   detailSkeleton: {
     display: 'flex',
     flexDirection: 'column',
+    flexGrow: 1, // Zorgt ervoor dat de kolom de overige ruimte inneemt
     ...shorthands.gap('16px'),
   },
   tableWrapper: {
@@ -91,9 +100,9 @@ const useStyles = makeStyles({
   },
 });
 
-function getHourTypeLabel(type: Uursoort, hours: number, isInternal: boolean): string {
-  if (type === 'reservering' && hours > 8 && isInternal) return 'Vakantie';
-  return type;
+function formatDate(date: string): string {
+  const [year, month, day] = date.split('-');
+  return `${day}-${month}-${year}`;
 }
 
 export default function PlanningDetails({
@@ -101,6 +110,7 @@ export default function PlanningDetails({
   employeeName,
   isInternal,
   employeeDetails,
+  selectedEmployeeDetails,
   isEmployeeDetailsLoading,
   office365Profile,
   office365Photo,
@@ -115,46 +125,60 @@ export default function PlanningDetails({
     <Dialog open={open} onOpenChange={(_, data) => onOpenChange(data.open)}>
       <DialogSurface className={styles.dialogSurface}>
         <DialogBody>
-          <DialogTitle>{employeeName ?? 'Employee Detail'}</DialogTitle>
           <DialogContent className={styles.dialogContent}>
             {isInternal && (
               <aside className={styles.profilePanel}>
                 {isOffice365Loading && (
-                  <Skeleton className={styles.profileSkeleton} animation="wave">
-                    <SkeletonItem shape="circle" size={96} />
-                    <SkeletonItem size={24} />
-                    <SkeletonItem size={16} />
-                    <SkeletonItem size={16} />
-                    <SkeletonItem size={16} />
+                  <Skeleton animation="wave">
+                    <div className={styles.profileSkeleton}>
+                      <SkeletonItem shape="circle" size={96} />
+                      <div className={styles.detailSkeleton}>
+                        <SkeletonItem size={16} />
+                        <SkeletonItem size={16} />
+                        <SkeletonItem size={16} />
+                        <SkeletonItem size={16} />
+                      </div>
+                    </div>
                   </Skeleton>
                 )}
                 {office365Photo && (
                   <img className={styles.profilePhoto} src={office365Photo} alt="" />
                 )}
-                {office365Profile && (
-                  <>
-                    <Text weight="semibold">{office365Profile.displayName}</Text>
-                    {office365Profile.jobTitle && <Text>{office365Profile.jobTitle}</Text>}
-                    {office365Profile.department && <Text>{office365Profile.department}</Text>}
-                    {office365Profile.officeLocation && (
-                      <Text>{office365Profile.officeLocation}</Text>
-                    )}
-                    <a href={`mailto:${office365Profile.mail}`}>
-                      <Text>{office365Profile.mail}</Text>
-                    </a>
+                <div className={styles.dialogAsideContent}>
+                  {office365Profile && (
+                    <>
+                      <DialogTitle>
+                        {employeeName ?? (office365Profile?.displayName || 'Employee Detail')}
+                      </DialogTitle>
+                      {office365Profile.jobTitle && (
+                        <Text weight="semibold">{office365Profile.jobTitle}</Text>
+                      )}
+                      {office365Profile.department && <Text>{office365Profile.department}</Text>}
+                      {office365Profile.officeLocation && (
+                        <Text>{office365Profile.officeLocation}</Text>
+                      )}
+                      <a href={`mailto:${office365Profile.mail}`}>
+                        <Text>{office365Profile.mail}</Text>
+                      </a>
 
-                    {office365Profile.mobilePhone && <Text>{office365Profile.mobilePhone}</Text>}
-                    {office365Profile.businessPhones?.map((phone) => (
-                      <Text key={phone}>{phone}</Text>
-                    ))}
-                  </>
-                )}
-                {isOffice365ProfileMissing && <Text>Geen Office 365-profiel gevonden.</Text>}
-                {office365ErrorMessage && (
-                  <Text>
-                    Office 365-gegevens konden niet worden geladen: {office365ErrorMessage}
-                  </Text>
-                )}
+                      {office365Profile.mobilePhone && <Text>{office365Profile.mobilePhone}</Text>}
+                      {office365Profile.businessPhones?.map((phone) => (
+                        <Text key={phone}>{phone}</Text>
+                      ))}
+                    </>
+                  )}
+                  {isOffice365ProfileMissing && (
+                    <>
+                      <Text>{employeeName}</Text>
+                      <Text>Geen Office 365-profiel gevonden.</Text>
+                    </>
+                  )}
+                  {office365ErrorMessage && (
+                    <Text>
+                      Office 365-gegevens konden niet worden geladen: {office365ErrorMessage}
+                    </Text>
+                  )}
+                </div>
               </aside>
             )}
 
@@ -167,40 +191,34 @@ export default function PlanningDetails({
                   ))}
                 </Skeleton>
               )}
-              {employeeDetails && (
+              {employeeDetails && selectedEmployeeDetails && (
                 <div className={styles.tableWrapper}>
                   <table className={styles.table}>
                     <thead>
                       <tr>
-                        <th className={styles.th}>Week</th>
-                        <th className={styles.th}></th>
-                        <th className={styles.th}>Uren totaal</th>
-                        <th className={styles.th}>Ingezet</th>
-                        <th className={styles.th}>Details</th>
+                        <th className={styles.th}>Project naam</th>
+                        <th className={styles.th}>Klant</th>
+                        <th className={styles.th}>Start datum</th>
+                        <th className={styles.th}>Eind datum</th>
+                        <th className={styles.th}>Uren per week</th>
+                        <th className={styles.th}>Status</th>
                       </tr>
                     </thead>
                     <tbody>
-                      {employeeDetails.weeks.map((week) => (
-                        <tr key={week.week_nr}>
-                          <td className={styles.td}>W{week.week_nr}</td>
-                          <td className={styles.td}>{week.monday}</td>
-                          <td className={styles.td}>{week.total_hours}</td>
-                          <td className={styles.td}>{week.is_fully_assigned ? 'Yes' : 'No'}</td>
-                          <td className={styles.td}>
-                            {week.week_uren.map((entry, index) => (
-                              <div key={index}>
-                                {getHourTypeLabel(
-                                  entry.type,
-                                  entry.hours,
-                                  employeeDetails.department_category === 'Intern',
-                                )}
-                                : {entry.hours}h
-                                {entry.project_name ? ` - ${entry.project_name}` : ''}
-                              </div>
-                            ))}
-                          </td>
-                        </tr>
-                      ))}
+                      {selectedEmployeeDetails.assignments
+                        .filter((assignment) => assignment.hours_per_week > 0)
+                        .map((assignement) => (
+                          <tr key={assignement.project_id}>
+                            <td className={styles.td}>W{assignement.project.name}</td>
+                            <td className={styles.td}>{assignement.project.customer.name}</td>
+                            <td className={styles.td}>{formatDate(assignement.start_date)}</td>
+                            <td className={styles.td}>
+                              {assignement.end_date ? formatDate(assignement.end_date) : ''}
+                            </td>
+                            <td className={styles.td}>{assignement.hours_per_week}</td>
+                            <td className={styles.td}>{assignement.project.status}</td>
+                          </tr>
+                        ))}
                     </tbody>
                   </table>
                 </div>
